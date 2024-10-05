@@ -21,7 +21,7 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
 }
 
 interface DynamicMapProps {
-  products: Product[],
+  products: any,
   posix: [number,number]
   selectedProductId: string | null
 }
@@ -34,7 +34,7 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
 
   useEffect(() => {
       if (selectedProductId) {
-          const product = products.find(item => item.product_id === selectedProductId);
+          const product = products.find((item :any) => item.id === selectedProductId);
           if (product) {
               setZoom(15);
               setCenter([product.latitude, product.longitude]);
@@ -83,21 +83,21 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {products.map((product) => (
+            {products.map((product :any) => (
                 <Marker 
-                    key={product.product_id} 
+                    key={product.id} 
                     position={[product.latitude, product.longitude]}
 
                     ref={(ref) => {
                         if (ref) {
-                            markerRefs.current[product.product_id] = ref;
+                            markerRefs.current[product.id] = ref;
                         }
                     }}
                 >
                     <Popup minWidth={380}>
                         <div className="flex flex-col items-center p-1">
-                            {product.primary_image_url && (
-                                <img src={product.primary_image_url} alt={`Product ${product.title}`} className="w-full min-h-[10rem] max-h-[10rem] rounded-lg object-cover mr-4" />
+                            {product?.images[0]?.imageUrl && (
+                                <img src={product?.images[0]?.imageUrl} alt={`Product ${product.title}`} className="w-full min-h-[10rem] max-h-[10rem] rounded-lg object-cover mr-4" />
                             )}
                             <div className="p-3 w-full my-2 rounded-md border">
                                 <span className="font-semibold text-lg">{product.title}</span>

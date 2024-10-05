@@ -1,18 +1,19 @@
  
 import { MapPin , Map , DollarSign} from "lucide-react";
-import { Product } from "~/db/definitions"
 import { calculateDistance } from "~/utils/distance";
 import { useState, useEffect } from 'react';
 import { Button } from "~/components/ui/button"
 import FilterDialog from "~/ui/index/filterDialog";
 
 interface SidebarProductProps {
-  Products: Product[]
+  Products: any
   onClick: (productId: string) => void
   selectedProductId: string | null
 }
 
 export default function SidebarProduct({ Products, onClick, selectedProductId }: SidebarProductProps) {
+
+ 
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   useEffect(() => {
@@ -47,22 +48,22 @@ export default function SidebarProduct({ Products, onClick, selectedProductId }:
       </div>
     </div>
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {Products.map((item: Product) => {
+      {Products.map((item: any) => {
         const distance = userLocation && item.latitude && item.longitude
           ? calculateDistance(userLocation[0], userLocation[1], item.latitude, item.longitude)
           : null;
 
-        const isSelected = item.product_id === selectedProductId;
+        const isSelected = item.id === selectedProductId;
 
         return (
           <div 
-            key={item.product_id} 
+            key={item.id} 
             className={`bg-white p-4 rounded-lg border hover:shadow-md transition-shadow cursor-pointer ${isSelected ? 'border-blue-500 shadow-md' : ''}`}
-            onClick={() => onClick(item.product_id)}
+            onClick={() => onClick(item.id)}
           >
             <div className="flex items-start">
-              {item.primary_image_url && (
-                <img src={item.primary_image_url} alt={`Product ${item.title}`} className="w-20 h-20 rounded-lg object-cover mr-4" />
+              {item?.images[0]?.imageUrl && (
+                <img src={item?.images[0]?.imageUrl} alt={`Product ${item.title}`} className="w-20 h-20 rounded-lg object-cover mr-4" />
               )}
               <div>
                 <h3 className="font-semibold text-lg">{item.title}</h3>

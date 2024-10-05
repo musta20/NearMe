@@ -184,6 +184,7 @@ export async function getAllProductsOld() {
         take: 1,
       },
     },
+    take: 10,
     orderBy: {
       createdAt: 'desc',
     },
