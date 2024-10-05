@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { faker } from "@faker-js/faker";
+import { faker } from '@faker-js/faker';
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -75,6 +75,7 @@ async function seed() {
 
     // Create product images
     const imageCount = faker.number.int({ min: 1, max: 5 });
+ 
     for (let j = 0; j < imageCount; j++) {
       await prisma.productImage.create({
         data: {
