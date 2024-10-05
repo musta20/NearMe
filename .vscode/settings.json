@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "remix",
+            "connectString": "postgresql://johndoe:randompassword@localhost:5432/mydb"
+        }
+    ]
+}
