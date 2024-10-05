@@ -13,13 +13,13 @@ export function UserMenu() {
         {true  ? (
           <>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link to="/auth/register" className="flex items-center">
+              <Link to="/register" className="flex items-center">
                 <User className="mr-2 h-4 w-4" />
                 <span>Sign up</span>
               </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link to="/auth/signin" className="flex items-center">
+              <Link to="/login" className="flex items-center">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sign in</span>
               </Link>

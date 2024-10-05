@@ -110,7 +110,7 @@ export default function UserForm({ user }: UserFormProps) {
       <CardHeader>
         <div className="flex items-center space-x-4">
           <Avatar className="w-20 h-20">
-            <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Profile picture" />
+            {/* <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Profile picture" /> */}
             <AvatarFallback>JD</AvatarFallback>
           </Avatar>
           <div>

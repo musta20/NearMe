@@ -1,3 +1,4 @@
+'use client'
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -53,7 +54,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   return null;
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
 
@@ -85,7 +86,21 @@ export default function LoginPage() {
               {actionData?.formError ? (
                 <div className="text-red-600 text-center">{actionData.formError}</div>
               ) : null}
-              <FormField
+     
+                          <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full name</FormLabel>
+                    <FormControl>
+                      <Input type="name" placeholder="Enter your email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+                       <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
@@ -93,6 +108,19 @@ export default function LoginPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="Enter your email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+                          <FormField
+                control={form.control}
+                name="user name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User name</FormLabel>
+                    <FormControl>
+                      <Input type="username" placeholder="Enter your email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -111,39 +139,40 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
+<FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirem Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter your password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="flex items-center justify-between">
-                <FormField
-                  control={form.control}
-                  name="rememberMe"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Remember me
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
+               
                 <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
+                  have account?
                 </Link>
               </div>
-              <Button type="submit" className="w-full">Log in</Button>
+              <Button type="submit" className="w-full">Register</Button>
             </form>
           </Form>
           <Separator />
           <div className="space-y-2">
-            <Button variant="outline" className="w-full" onClick={() => console.log("Login with Google")}>
+            <Button variant="outline" className="w-full" onClick={() => console.log("Register with Google")}>
               <Icons.google className="mr-2 h-4 w-4" />
               Log in with Google
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => console.log("Login with Facebook")}>
+            <Button variant="outline" className="w-full" onClick={() => console.log("Register with Facebook")}>
               <Icons.facebook className="mr-2 h-4 w-4" />
               Log in with Facebook
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => console.log("Login with X")}>
+            <Button variant="outline" className="w-full" onClick={() => console.log("Register with X")}>
               <Icons.twitter className="mr-2 h-4 w-4" />
               Log in with X
             </Button>

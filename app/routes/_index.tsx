@@ -2,7 +2,7 @@ import { json, type LoaderFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { getAllProductsOld } from "~/lib/action";
 import MainMapPage from "~/ui/index/MainMapPage";
-
+ 
 export const loader: LoaderFunction = async () => {
   try {
     const products = await getAllProductsOld();
