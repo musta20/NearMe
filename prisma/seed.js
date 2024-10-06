@@ -7,8 +7,26 @@ const prisma = new PrismaClient();
 async function seed() {
   console.log("🌱 Seeding database...");
 
+  // Create categories
+  const categorySet = new Set();
+  const categories = [];
+  while (categorySet.size < 10) {
+    const categoryName = faker.commerce.department();
+    if (!categorySet.has(categoryName)) {
+      categorySet.add(categoryName);
+      const category = await prisma.categories.create({
+        data: {
+          name: categoryName
+        },
+      });
+      categories.push(category);
+    }
+  }
+
+  console.log("✅ Categories seeded");
+
   // Create users
-  //Christophe.Marks@yahoo.com
+  //Shanel.Sawayn51@gmail.com
   const users = [];
   for (let i = 0; i < 10; i++) {
     const user = await prisma.user.create({
@@ -63,36 +81,42 @@ async function seed() {
   // Create products
   const products = [];
 
-  for (let i = 0; i < 50; i++) {
-    const { latitude, longitude } = generateRandomCoordinate(29.0586624, 31.1263232, 5);
-    const product = await prisma.product.create({
-      data: {
-        sellerId: faker.helpers.arrayElement(users).id,
-        title: faker.commerce.productName(),
-        description: faker.commerce.productDescription(),
-        price: parseFloat(faker.commerce.price()),
-        latitude: latitude,
-        longitude: longitude,
-        address: faker.location.streetAddress(),
-      },
-    });
-    
-    products.push(product);
-
-    // Create product images
-    const imageCount = faker.number.int({ min: 1, max: 5 });
- 
-    for (let j = 0; j < imageCount; j++) {
-      await prisma.productImage.create({
+  // Create 20 products for each user
+  for (const user of users) {
+    for (let i = 0; i < 20; i++) {
+      const { latitude, longitude } = generateRandomCoordinate(29.0586624, 31.1263232, 5);
+      const product = await prisma.product.create({
         data: {
-          productId: product.id,
-          imageUrl: faker.image.url(),
-          order: j,
-          isPrimary: j === 0,
+          sellerId: user.id,
+          categoryId: faker.helpers.arrayElement(categories).id,
+          title: faker.commerce.productName(),
+          description: faker.commerce.productDescription(),
+          price: parseFloat(faker.commerce.price()),
+          latitude: latitude,
+          longitude: longitude,
+          address: faker.location.streetAddress(),
         },
       });
+      
+      products.push(product);
+
+      // Create product images
+      const imageCount = faker.number.int({ min: 1, max: 5 });
+   
+      for (let j = 0; j < imageCount; j++) {
+        await prisma.productImage.create({
+          data: {
+            productId: product.id,
+            imageUrl: faker.image.url(),
+            order: j,
+            isPrimary: j === 0,
+          },
+        });
+      }
     }
   }
+
+  console.log("✅ Products and images seeded");
 
   // Create favorites
   for (let i = 0; i < 100; i++) {

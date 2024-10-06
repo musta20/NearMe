@@ -81,12 +81,35 @@ export async function getProduct(id: string) {
 }
 
 export async function updateProduct(id: string, data: Partial<z.infer<typeof ProductSchema>>) {
-  const validatedData = ProductSchema.partial().parse(data);
-  return prisma.product.update({ where: { id }, data: validatedData });
+ // const validatedData = ProductSchema.partial().parse(data);
+ // return prisma.product.update({ where: { id }, data: validatedData });
 }
 
 export async function deleteProduct(id: string) {
-  return prisma.product.delete({ where: { id } });
+  // Start a transaction to ensure all operations succeed or fail together
+  return prisma.$transaction(async (tx) => {
+    // Delete all related product images
+    await tx.productImage.deleteMany({
+      where: { productId: id },
+    });
+
+    // Delete all related favorites
+    await tx.favorite.deleteMany({
+      where: { productId: id },
+    });
+
+    // Delete all related messages
+    await tx.message.deleteMany({
+      where: { productId: id },
+    });
+
+    // Finally, delete the product itself
+    const deletedProduct = await tx.product.delete({
+      where: { id },
+    });
+
+    return deletedProduct;
+  });
 }
 
 // Product Image CRUD
@@ -273,4 +296,12 @@ export async function login(email: string, password: string) {
   const { passwordHash, ...userWithoutPassword } = user;
  
   return userWithoutPassword;
+}
+
+export async function getAllCategories() {
+  return prisma.categories.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+  });
 }

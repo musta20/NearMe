@@ -10,13 +10,14 @@
     "start": "remix-serve ./build/server/index.js",
     "seed": "node prisma/seed.js",
     "drop": "npx prisma migrate reset",
-    "create": "npx prisma db push",
+    "createtable": "npx prisma db push",
     "typecheck": "tsc"
   },
   "dependencies": {
     "@faker-js/faker": "^9.0.3",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.20.0",
+    "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",

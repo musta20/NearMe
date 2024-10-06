@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { MoreHorizontal, ArrowUpDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useMemo, useEffect } from 'react'
+import { MoreHorizontal ,Trash, Pencil, ArrowUpDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from "~/components/ui/button"
 import {
   Table,
@@ -19,10 +19,29 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Input } from "~/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { json, Link, useLoaderData } from "@remix-run/react"
-import { LoaderFunction } from "@remix-run/node"
+import { json, Link, useLoaderData, useSearchParams } from "@remix-run/react"
+import { ActionFunction, LoaderFunction, redirect } from "@remix-run/node"
 import { authenticator } from "~/services/auth.server"
-import { getUserProducts } from "~/lib/action"
+import { deleteProduct, getUserProducts } from "~/lib/action"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog"
+import { toast } from "~/hooks/use-toast"
+import { Form, useSubmit } from "@remix-run/react"
+
+// Assume we have a Product type defined
+type Product = {
+  id: string
+  title: string
+  // ... other product properties
+}
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await authenticator.isAuthenticated(request, {
@@ -30,12 +49,25 @@ export const loader: LoaderFunction = async ({ request }) => {
   });
 
   const products = await getUserProducts(userId.id);
+  const url = new URL(request.url);
+  const deleted = url.searchParams.get('deleted') === 'true';
 
-  return json({ products });
+  return json({ products, deleted });
 };
 
 export default function SellerProductList() {
-  const { products } = useLoaderData<typeof loader>();
+  const { products, deleted } = useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  
+  useEffect(() => {
+    if (deleted) {
+      toast({
+        title: "Product deleted",
+        description: "The product has been successfully deleted.",
+      });
+    }
+  }, [deleted]);
+
   const [searchTerm, setSearchTerm] = React.useState("")
   const [sortColumn, setSortColumn] = React.useState<keyof (typeof products)[0] | null>(null)
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc')
@@ -70,6 +102,35 @@ export default function SellerProductList() {
     } else {
       setSortColumn(column)
       setSortDirection('asc')
+    }
+  }
+
+  const [productToDelete, setProductToDelete] = React.useState<Product | null>(null)
+  const submit = useSubmit()
+
+  const handleDeleteClick = (product: Product) => {
+     setProductToDelete(product)
+  }
+
+  const handleDeleteConfirm = () => {
+    console.log(productToDelete)
+     if (productToDelete) {
+      const formData = new FormData()
+      formData.append('_action', 'deleteProduct')
+      formData.append('productId', productToDelete.id)
+       submit(formData, { method: 'post' })
+      
+      // Update the local state to remove the product
+      //setProducts(products.filter(p => p.id !== productToDelete.id))
+      
+      // Show a success toast
+      // toast({
+      //   title: "Product deleted",
+      //   description: "The product has been successfully deleted.",
+      // })
+      
+      // Reset the productToDelete state
+      setProductToDelete(null)
     }
   }
 
@@ -139,12 +200,17 @@ export default function SellerProductList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>
+                        <Pencil className="mr-2 h-4 w-4" />
+
                           <Link to={`/products/${product.id}/edit`}>
                           Edit product
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>Delete product</DropdownMenuItem>
+                        <DropdownMenuItem className='cursor-pointer' onSelect={() => handleDeleteClick(product)}>
+                          <Trash className="mr-2 h-4 w-4" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -179,6 +245,52 @@ export default function SellerProductList() {
           </div>
         </CardContent>
       </Card>
+      <AlertDialog open={!!productToDelete} //onOpenChange={() => setProductToDelete(null)}
+        >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the product
+              "{productToDelete?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Form method="post" onSubmit={(event) => {
+              event.preventDefault()
+              handleDeleteConfirm()
+            }}>
+        
+              <AlertDialogAction type="submit">
+                Delete
+              </AlertDialogAction>
+            </Form>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
+
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+  const action = formData.get('_action');
+
+  if (action === 'deleteProduct') {
+    const productId = formData.get('productId');
+    if (typeof productId !== 'string') {
+      return json({ error: "Invalid product ID" }, { status: 400 });
+    }
+
+    try {
+      await deleteProduct(productId);
+      return redirect('/products?deleted=true');
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      return json({ error: "Failed to delete product" }, { status: 400 });
+    }
+  }
+
+  return json({ error: "Invalid action" }, { status: 400 });
+};

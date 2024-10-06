@@ -33,6 +33,8 @@ model Product {
   id          String         @id @default(uuid())
   sellerId    String
   seller      User           @relation(fields: [sellerId], references: [id])
+  categoryId  String    
+  category    categories     @relation(fields: [categoryId], references: [id])
   title       String
   description String
   price       Decimal        @db.Decimal(10, 2)
@@ -44,6 +46,14 @@ model Product {
   images      ProductImage[]
   favorites   Favorite[]
   messages    Message[]
+}
+
+
+model categories {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  products    Product[]
+
 }
 
 model ProductImage {
