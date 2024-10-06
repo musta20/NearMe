@@ -19,7 +19,6 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { json, Link, useActionData, useSubmit } from '@remix-run/react'
 import { Icons } from '~/ui/icons'
 import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
-import { getUserId , createUserSession, login } from '~/server/session.server'
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),

@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -17,8 +17,14 @@ import { Separator } from "~/components/ui/separator"
 import { Checkbox } from "~/components/ui/checkbox"
 import { json, Link, useActionData, useSubmit } from '@remix-run/react'
 import { Icons } from '~/ui/icons'
-import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
-import { getUserId , createUserSession, login } from '~/server/session.server'
+import { ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs, redirect } from '@remix-run/node'
+import { authenticator } from "~/services/auth.server"
+import { useState } from "react"
+
+import {
+  isRouteErrorResponse,
+  useRouteError,
+} from "@remix-run/react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -28,33 +34,10 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-export const action: ActionFunction = async ({ request }) => {
-  
-  const form = await request.formData();
-  const email = form.get("email");
-  const password = form.get("password");
-  
-  if (typeof email !== "string" || typeof password !== "string") {
-    return json({ formError: `Form not submitted correctly.` }, { status: 400 });
-  }
-
-  const user = await login({ email, password });
-  if (!user) {
-    return json({ formError: `Email/Password combination is incorrect` }, { status: 400 });
-  }
-
-  return createUserSession(user.id, '/');
-};
-
-export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUserId(request);
-  console.log(userId)
- // if (userId) return redirect("/");
-  return null;
-};
-
 export default function LoginPage() {
-  const actionData = useActionData<typeof action>();
+   const actionData = useActionData<typeof action>();
+  const error = useRouteError();
+
   const submit = useSubmit();
 
   const form = useForm<LoginFormValues>({
@@ -66,6 +49,7 @@ export default function LoginPage() {
     },
   })
 
+ 
   function onSubmit(data: LoginFormValues) {
     submit(data, { method: "post" });
   }
@@ -80,11 +64,15 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {isRouteErrorResponse(error) && (
+                      <div className="text-red-600 text-center">error</div>
+          )
+                  }
+          {actionData?.formError && (
+            <div className="text-red-600 text-center">{actionData.formError}</div>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {actionData?.formError ? (
-                <div className="text-red-600 text-center">{actionData.formError}</div>
-              ) : null}
               <FormField
                 control={form.control}
                 name="email"
@@ -160,4 +148,52 @@ export default function LoginPage() {
       </Card>
     </div>
   )
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+ // try {
+    return await authenticator.authenticate("user-pass", request, {
+      successRedirect: "/profile",
+      failureRedirect: "/login",
+    });
+ // } catch (error) {
+    // Log the error to the console
+  //  console.log(error)
+     
+    // Handle the error and return it as formError
+ //   return json({ formError: (error as Error).message }, { status: 400 });
+//  }
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  
+  return await authenticator.isAuthenticated(request, {
+    successRedirect: "/profile",
+  });
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  } else if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        <p>The stack trace is:</p>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  } else {
+    return <h1>Unknown Error</h1>;
+  }
 }

@@ -6,11 +6,12 @@ import { PopoverContent } from '~/components/ui/popover'
 
  
 
-export function UserMenu() {
+export function UserMenu({user}) {
+  //console.log(user)
   return (
     <PopoverContent className="w-56 mt-2">
       <div className="grid gap-4">
-        {true  ? (
+        {!user  ? (
           <>
             <Button variant="ghost" className="w-full justify-start" asChild>
               <Link to="/register" className="flex items-center">
@@ -28,8 +29,8 @@ export function UserMenu() {
         ) : (
           <>
             <div>
-              <div className="font-medium">musta</div>
-              <div className="text-sm text-gray-500">musta@gmail.com</div>
+              <div className="font-medium">{user.username}</div>
+              <div className="text-sm text-gray-500">{user.email}</div>
             </div>
             <hr />
             <Button variant="ghost" className="w-full justify-start" asChild>
@@ -39,9 +40,9 @@ export function UserMenu() {
               </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link to="/settings" className="flex items-center">
+              <Link to="/products" className="flex items-center">
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>Products</span>
               </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
@@ -51,7 +52,9 @@ export function UserMenu() {
               </Link>
             </Button>
             <hr />
-            <Button 
+                          <Link to={'/logout'}>
+
+             <Button 
               variant="ghost" 
               className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
              // onClick={() => signOut({ callbackUrl: '/' })}
@@ -59,6 +62,8 @@ export function UserMenu() {
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </Button>
+            </Link>
+
           </>
         )}
       </div>

@@ -4,12 +4,15 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 
 import "./tailwind.css";
 import Header from "./ui/index/header";
 import { Toaster } from "./components/ui/toaster";
+import { authenticator } from "./services/auth.server";
+import { getUser } from "./lib/action";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -25,6 +28,7 @@ export const links: LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const user = useLoaderData();
   return (
     <html lang="en">
       <head>
@@ -36,7 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
 
       <div className="flex flex-col h-screen">
-      <Header />
+      <Header user = {user} />
 
         {children}
         <Toaster /> 
@@ -48,6 +52,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </html>
   );
 }
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  // If the user is already authenticated redirect to /dashboard directly
+  let userId = await authenticator.isAuthenticated(request);
+  if(!userId) return false;
+   let user= await getUser(userId?.id);
+  return user;
+};
+
+
 
 export default function App() {
   return <Outlet />;

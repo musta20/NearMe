@@ -5,7 +5,7 @@ import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
 import { Popover, PopoverTrigger } from '~/components/ui/popover'
 
-export default  function Header(){
+export default  function Header({user}){
 
   return (
     <header className="p-4 bg-white border-b sticky top-0 z-10">
@@ -31,7 +31,7 @@ export default  function Header(){
                 <User size={24} />
               </Button>
             </PopoverTrigger>
-            <UserMenu />
+            <UserMenu user ={user} />
           </Popover>
         </div>
       </div>

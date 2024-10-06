@@ -8,12 +8,16 @@ async function seed() {
   console.log("🌱 Seeding database...");
 
   // Create users
+  //Christophe.Marks@yahoo.com
   const users = [];
   for (let i = 0; i < 10; i++) {
     const user = await prisma.user.create({
       data: {
         email: faker.internet.email(),
         username: faker.internet.userName(),
+        bio: faker.person.bio(),
+        name: faker.person.fullName(),
+        address: faker.location.streetAddress(),
         passwordHash: await bcrypt.hash("password123", 10),
         phoneNumber: faker.phone.number(),
       },
@@ -58,6 +62,7 @@ async function seed() {
 
   // Create products
   const products = [];
+
   for (let i = 0; i < 50; i++) {
     const { latitude, longitude } = generateRandomCoordinate(29.0586624, 31.1263232, 5);
     const product = await prisma.product.create({
@@ -71,6 +76,7 @@ async function seed() {
         address: faker.location.streetAddress(),
       },
     });
+    
     products.push(product);
 
     // Create product images

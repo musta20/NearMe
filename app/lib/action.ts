@@ -144,7 +144,15 @@ export async function deleteMessage(id: string) {
 // Additional utility functions
 
 export async function getUserProducts(userId: string) {
-  return prisma.product.findMany({ where: { sellerId: userId } });
+  const products = await prisma.product.findMany({
+    where: { sellerId: userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return products.map(product => ({
+    ...product,
+    price: parseFloat(product.price.toString())
+  }));
 }
 
 export async function getUserFavorites(userId: string) {
@@ -233,3 +241,36 @@ const PaginationSchema = z.object({
       },
     };
   }
+
+// Add this new login function
+export async function login(email: string, password: string) {
+  if (!email || !password) {
+    throw new Error("Email and password are required");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user || !user.passwordHash) {
+    //console.log('Invalid email or password')
+    throw new Error("Invalid email or password");
+  }
+
+  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+
+  if (!isValidPassword) {
+    throw new Error("Invalid email or password");
+  }
+
+  // Return user without passwordHash
+  const { passwordHash, ...userWithoutPassword } = user;
+ 
+  return userWithoutPassword;
+}

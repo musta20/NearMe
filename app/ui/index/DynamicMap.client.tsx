@@ -9,11 +9,7 @@ import "leaflet-defaulticon-compatibility";
 import { useEffect, useState, useRef } from "react";
 import L from 'leaflet';
 
-interface MapProps {
-    posix: [number, number];
-    products: Product[];
-    selectedProductId: string | null;
-}
+ 
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
   const map = useMap();
   map.setView(center, zoom);
@@ -52,8 +48,7 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-            console.log(position.coords.latitude,position.coords.longitude)
-          setPosition([position.coords.latitude, position.coords.longitude])
+           setPosition([position.coords.latitude, position.coords.longitude])
         },
         (error) => {
           console.error('Error getting location:', error)
@@ -62,8 +57,7 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
         }
       )
     } else {
-      console.log('Geolocation is not available')
-      // Fallback to a default location if geolocation is not available
+       // Fallback to a default location if geolocation is not available
       setPosition([29.0586624, 31.1263232])
     }
   }, [])

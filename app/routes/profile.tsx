@@ -13,10 +13,14 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form"
- 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { toast } from "~/hooks/use-toast"
+import { ActionFunction, LoaderFunctionArgs } from "@remix-run/node"
+import { authenticator } from "~/services/auth.server"
+import { useLoaderData, useActionData, json, Form as RemixForm, useSubmit } from "@remix-run/react"
+import { getUser, updateUser } from "~/lib/action"
+import { useEffect } from "react"
 
 const profileFormSchema = z.object({
   username: z
@@ -41,32 +45,65 @@ const profileFormSchema = z.object({
     .max(50, {
       message: "Name must not be longer than 50 characters.",
     }),
-  location: z.string().max(100).optional(),
+    address: z.string().max(100).optional(),
 })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-const defaultValues: Partial<ProfileFormValues> = {
-  username: "johndoe",
-  email: "john.doe@example.com",
-  bio: "I'm a product enthusiast and avid collector.",
-  name: "John Doe",
-  location: "New York, USA",
-}
+export const action: ActionFunction = async ({ request }) => {
+  const userId = await authenticator.isAuthenticated(request, {
+    failureRedirect: "/login",
+  });
+
+
+  const formData = await request.formData();
+  const updates = Object.fromEntries(formData);
+
+  //console.log(formData)
+
+  try {
+    await updateUser(userId.id, updates);
+    return json({ success: true });
+  } catch (error) {
+    console.error("Failed to update profile:", error);
+    return json({ error: "Failed to update profile" }, { status: 400 });
+  }
+};
 
 export default function ProfileEditPage() {
+  const user = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const submit = useSubmit();
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues,
+    defaultValues: {
+      username: user.username || "",
+      email: user.email || "",
+      bio: user.bio || "",
+      name: user.name || "",
+      address: user.address || "",
+    },
     mode: "onChange",
-  })
+  });
+
+  useEffect(() => {
+    if (actionData?.success) {
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } else if (actionData?.error) {
+      toast({
+        title: "Error",
+        description: actionData.error,
+        variant: "destructive",
+      });
+    }
+  }, [actionData]);
 
   function onSubmit(data: ProfileFormValues) {
-    toast({
-      title: "Profile updated",
-    description: "Your profile has been successfully updated.",
-    })
-    console.log(data)
+    submit(data, { method: "post" });
   }
 
   return (
@@ -75,7 +112,6 @@ export default function ProfileEditPage() {
         <CardHeader>
           <div className="flex items-center space-x-4">
             <Avatar className="w-20 h-20">
-              {/* <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Profile picture" /> */}
               <AvatarFallback>JD</AvatarFallback>
             </Avatar>
             <div>
@@ -85,94 +121,110 @@ export default function ProfileEditPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="johndoe" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is your public display name. It can be your real name or a pseudonym.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="john.doe@example.com" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      We'll never share your email with anyone else.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us a little bit about yourself"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      You can @mention other users and organizations to link to them.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="New York, USA" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Your location will help us provide more relevant content.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Update profile</Button>
-            </form>
-          </Form>
+          <RemixForm method="post" onSubmit={form.handleSubmit(onSubmit)}>
+            <Form {...form}>
+              <div className="space-y-8">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="johndoe" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        This is your public display name. It can be your real name or a pseudonym.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="john.doe@example.com" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        We'll never share your email with anyone else.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bio</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tell us a little bit about yourself"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        You can @mention other users and organizations to link to them.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="New York, USA" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Your Address will help us provide more relevant content.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit">Update profile</Button>
+              </div>
+            </Form>
+          </RemixForm>
         </CardContent>
       </Card>
     </div>
   )
 }
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  let userId = await authenticator.isAuthenticated(request, {
+    failureRedirect: "/login",
+  });
+
+  const user = await getUser(userId.id);
+
+  if (!user) {
+    throw new Response("Not Found", { status: 404 });
+  }
+
+  return user;
+};
