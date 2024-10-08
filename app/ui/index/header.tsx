@@ -1,4 +1,4 @@
-import { Search, User } from 'lucide-react'
+import { Search, User, Heart } from 'lucide-react'
 import { UserMenu } from "./UserMenu"
 import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from "@remix-run/react"
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 
-export default function Header({user}) {
+export default function Header({user}: {user: any}) {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
@@ -54,11 +54,29 @@ export default function Header({user}) {
           </div>
         </form>
         <div className="flex items-center space-x-4">
-          {!user &&
-          <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full">
-            Become a seller
-          </Button>
-          }
+          {user ? (
+            <>
+            <Link                 to={"/favorites"}
+            >
+              <Button
+                variant="ghost"
+                className="text-gray-600 hover:bg-gray-100 rounded-full flex items-center"
+              >
+                <Heart className="mr-2" size={20} />
+                Favorites
+              </Button>
+              </Link>
+              <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full">
+                <Link to={"/products/new"}>
+                Become a seller
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full">
+              Become a seller
+            </Button>
+          )}
           <Popover open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full p-2">

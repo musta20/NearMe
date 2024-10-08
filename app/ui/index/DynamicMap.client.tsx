@@ -1,12 +1,14 @@
  
  
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { MapPin, CircleDollarSign } from "lucide-react";
+import { MapPin, CircleDollarSign, Heart } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
 import { useEffect, useState, useRef } from "react";
 import L from 'leaflet';
+import { Button } from "~/components/ui/button";
+import { useFetcher } from "@remix-run/react";
 
  
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
@@ -21,11 +23,12 @@ interface DynamicMapProps {
   selectedProductId: string | null
 }
 
-export default function DynamicMap({ products,posix, selectedProductId }: DynamicMapProps) {
+export default function DynamicMap({ products, posix, selectedProductId }: DynamicMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null)
   const [center, setCenter] = useState(posix);
   const [zoom, setZoom] = useState(18);
   const markerRefs = useRef<{ [key: string]: L.Marker }>({});
+  const fetcher = useFetcher();
 
   useEffect(() => {
       if (selectedProductId) {
@@ -61,6 +64,13 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
     }
   }, [])
 
+  const handleFavoriteClick = (productId: string) => {
+    fetcher.submit(
+      { productId },
+      { method: "post", action: "/api/toggle-favorite" }
+    );
+  };
+
   if (!position) {
     return <p>Loading map...</p>
   }
@@ -87,22 +97,31 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
                         }
                     }}
                 >
-                    <Popup minWidth={380}>
+                    <Popup className="p-1" minWidth={680}>
                         <div className="flex flex-col items-center p-1">
                             {product?.images[0]?.imageUrl && (
-                                <img src={product?.images[0]?.imageUrl} alt={`Product ${product.title}`} className="w-full min-h-[10rem] max-h-[10rem] rounded-lg object-cover mr-4" />
+                                <img src={product?.images[0]?.imageUrl} alt={`Product ${product.title}`} className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" />
                             )}
-                            <div className="p-3 w-full my-2 rounded-md border">
-                                <span className="font-semibold text-lg">{product.title}</span>
-                                <p>{product.description}</p>
+                            <div className="p-3 w-full my-2 rounded-md  ">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-lg">{product.title}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleFavoriteClick(product.id)}
+                                    >
+                                        <Heart className={`h-5 w-5 ${product.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+                                    </Button>
+                                </div>
+                                <p className="text-md" >{product.description}</p>
                                 <div className="flex gap-3">
 
-                                <div className="flex items-center text-md text-yellow-950">
+                                <div className="flex items-center text-lg text-yellow-950">
                                         <CircleDollarSign size={18} className="mr-1" />
                                         <span>price: {product.price}</span>
                                     </div>
-
-                                    <div className="flex items-center text-md text-gray-500">
+                                
+                                    <div className="flex items-center text-lg text-gray-500">
                                         <MapPin size={16} className="mr-1" />
                                         <span>{product.address}</span>
                                     </div>

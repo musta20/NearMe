@@ -18,8 +18,7 @@ export const action: ActionFunction = async ({ request }) => {
   try {
     const imageUrl = await uploadImage(file, user.id);
 
-    console.log(imageUrl)
-    await updateUser(user.id, { avatarImage: imageUrl });
+     await updateUser(user.id, { avatarImage: imageUrl });
 
     return json({ success: true, avatarUrl: imageUrl });
   } catch (error) {

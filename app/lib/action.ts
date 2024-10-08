@@ -3,8 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import fs from 'fs/promises';
 import path from 'path';
-import { prisma } from "~/db.server";
-
+ 
 const prisma = new PrismaClient();
 
 // Zod Schemas
@@ -69,8 +68,7 @@ export async function updateUser(id: string, data: Partial<z.infer<typeof UserSc
     validatedData.passwordHash = await bcrypt.hash(validatedData.password, 10);
     delete validatedData.password;
   }
-  console.log(validatedData)
-  return prisma.user.update({ where: { id }, data: validatedData });
+   return prisma.user.update({ where: { id }, data: validatedData });
 }
 
 export async function deleteUser(id: string) {
@@ -101,6 +99,24 @@ export async function createProduct(data: any) {
 
 export async function getProduct(id: string) {
   return prisma.product.findUnique({ where: { id } });
+}
+
+export async function getFavotite(userId: string){
+     return prisma.product.findMany({
+    include:{  images: {
+        where: { isPrimary: true },
+        take: 1,
+      }},
+    where: {
+      
+      favorites: {
+        some: {
+          userId: userId,
+        },
+            },
+      
+    }
+  });
 }
 
 // export async function updateProduct(id: string, data: z.infer<typeof ProductUpdateSchema>) {
@@ -487,4 +503,30 @@ export async function getFilteredProducts(filters: {
   });
 
   return products;
+}
+
+export async function toggleFavorite(userId: string, productId: string) {
+  const existingFavorite = await prisma.favorite.findUnique({
+    where: {
+      userId_productId: {
+        userId,
+        productId,
+      },
+    },
+  });
+
+  if (existingFavorite) {
+    await prisma.favorite.delete({
+      where: { id: existingFavorite.id },
+    });
+    return { isFavorite: false };
+  } else {
+    await prisma.favorite.create({
+      data: {
+        userId,
+        productId,
+      },
+    });
+    return { isFavorite: true };
+  }
 }

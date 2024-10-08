@@ -44,8 +44,7 @@ export function ProductImageGallery({ images, onDelete, onUpload, onSetPrimary }
   };
 
   const handleFiles = (files: FileList) => {
-    console.log('Files:', files);
-    onUpload(files);
+     onUpload(files);
   };
 
   const handleClick = () => {
