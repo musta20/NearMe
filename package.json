@@ -12,7 +12,7 @@
     "drop": "npx prisma migrate reset",
     "createtable": "npx prisma db push",
     "typecheck": "tsc",
-    "remig":"yarn drop -y && yarn createtable && yarn seed"
+    "remig": "yarn drop -y && yarn createtable && yarn seed"
   },
   "dependencies": {
     "@faker-js/faker": "^9.0.3",
@@ -39,6 +39,7 @@
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "embla-carousel-react": "^8.3.0",
     "isbot": "^4.4.0",
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",

@@ -1,28 +1,35 @@
-import { useState } from 'react'
+import { useSearchParams } from '@remix-run/react';
 import DynamicMap from '~/ui/index/DynamicMap.client'
 import SidebarProduct from '~/ui/index/sidebarProduct'
 import { ClientOnly } from "remix-utils/client-only";
 import { Product } from "~/db/definitions";
 import { ScrollArea } from "~/components/ui/scroll-area"
 
-export default function MainMapPage({ products, categories }: { products: Product[], categories: any[] }) {
-  const [selectedProductId, setSelectedProductId] = useState("")
+interface MainMapPageProps {
+  products: Product[];
+  categories: { id: string; name: string }[];
+  selectedProduct: Product | null;
+  favoriteProductIds: string[]; // Add this line
+}
+
+export default function MainMapPage({ products, categories, selectedProduct, favoriteProductIds }: MainMapPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedProductId = searchParams.get('selectedProductId') || '';
 
   const handleProductClick = (productId: string) => {
-    setSelectedProductId(productId);
+    setSearchParams({ selectedProductId: productId });
   };
 
   return(
     <div className="flex h-screen">
-      <ScrollArea className="min-w-96    ">
-        
-          <SidebarProduct 
-            Products={products} 
-            categories={categories}
-            onClick={handleProductClick}
-            selectedProductId={selectedProductId}
-          />
-        
+      <ScrollArea className="min-w-96">
+        <SidebarProduct 
+          Products={products} 
+          categories={categories}
+          onClick={handleProductClick}
+          selectedProductId={selectedProductId}
+          favoriteProductIds={favoriteProductIds} // Add this line
+        />
       </ScrollArea>
 
       {/* Map container */}
@@ -33,6 +40,7 @@ export default function MainMapPage({ products, categories }: { products: Produc
               products={products} 
               posix={[29.0586624, 31.1263232]}
               selectedProductId={selectedProductId} 
+              favoriteProductIds={favoriteProductIds} // Add this line
             />
           )}
         </ClientOnly>

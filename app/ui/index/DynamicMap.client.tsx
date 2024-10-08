@@ -8,8 +8,14 @@ import "leaflet-defaulticon-compatibility";
 import { useEffect, useState, useRef } from "react";
 import L from 'leaflet';
 import { Button } from "~/components/ui/button";
-import { useFetcher } from "@remix-run/react";
-
+import { useFetcher, useNavigate } from "@remix-run/react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "~/components/ui/carousel"
  
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
   const map = useMap();
@@ -21,33 +27,38 @@ interface DynamicMapProps {
   products: any,
   posix: [number,number]
   selectedProductId: string | null
+  favoriteProductIds: string[] // Add this line
 }
 
-export default function DynamicMap({ products, posix, selectedProductId }: DynamicMapProps) {
+export default function DynamicMap({ products, posix, selectedProductId, favoriteProductIds }: DynamicMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null)
   const [center, setCenter] = useState(posix);
   const [zoom, setZoom] = useState(18);
   const markerRefs = useRef<{ [key: string]: L.Marker }>({});
   const fetcher = useFetcher();
+  const navigate = useNavigate();
+  const mapRef = useRef<L.Map | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   useEffect(() => {
-      if (selectedProductId) {
-          const product = products.find((item :any) => item.id === selectedProductId);
-          if (product) {
-              setZoom(15);
-              setCenter([product.latitude, product.longitude]);
-              
-              // Open the popup for the selected product
-              const marker = markerRefs.current[selectedProductId];
-              if (marker) {
-                  marker.openPopup();
-              }
-          }
+    if (isMapReady && selectedProductId) {
+      const product = products.find((item :any) => item.id === selectedProductId);
+      if (product) {
+        setZoom(15);
+        setCenter([product.latitude, product.longitude]);
+        
+        // Open the popup for the selected product
+        const marker = markerRefs.current[selectedProductId];
+        if (marker) {
+          mapRef.current?.setView(marker.getLatLng(), 15);
+          marker.openPopup();
+        }
       }
-  }, [selectedProductId, products]);
+    }
+  }, [isMapReady, selectedProductId, products]);
 
   useEffect(() => {
-    if ('geolocation' in navigator) {
+     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
            setPosition([position.coords.latitude, position.coords.longitude])
@@ -64,74 +75,111 @@ export default function DynamicMap({ products, posix, selectedProductId }: Dynam
     }
   }, [])
 
-  const handleFavoriteClick = (productId: string) => {
+  const handleFavoriteToggle = (productId: string) => {
+    const isFavorite = favoriteProductIds.includes(productId);
     fetcher.submit(
       { productId },
-      { method: "post", action: "/api/toggle-favorite" }
+      { 
+        method: "post", 
+        action: isFavorite ? "/api/unfavorite" : "/api/toggle-favorite"
+      }
     );
+  };
+
+  const handleProductClick = (productId: string) => {
+    navigate(`/?selectedProductId=${productId}`, { replace: true });
   };
 
   if (!position) {
     return <p>Loading map...</p>
   }
 
-  return (<MapContainer
-            center={center}
-            zoom={zoom}
-            scrollWheelZoom={true}
-            style={{ height: "100%", width: "100%" }}
+  return (
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      scrollWheelZoom={true}
+      style={{ height: "100%", width: "100%" }}
+      ref={(map) => {
+        mapRef.current = map;
+        if (map) {
+          setIsMapReady(true);
+        }
+      }}
+    >
+      <ChangeView center={center} zoom={zoom} />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {products.map((product :any) => (
+        <Marker 
+          key={product.id} 
+          position={[product.latitude, product.longitude]}
+          ref={(ref) => {
+            if (ref) {
+              markerRefs.current[product.id] = ref;
+            }
+          }}
+          eventHandlers={{
+            click: () => handleProductClick(product.id)
+          }}
         >
-            <ChangeView center={center} zoom={zoom} />
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {products.map((product :any) => (
-                <Marker 
-                    key={product.id} 
-                    position={[product.latitude, product.longitude]}
+          <Popup className="p-1" minWidth={680}>
+            <div className="flex flex-col items-center p-1">
+            <Carousel>
+  <CarouselContent>
 
-                    ref={(ref) => {
-                        if (ref) {
-                            markerRefs.current[product.id] = ref;
-                        }
+    {product.images && product.images.length > 0 && (
+      product?.images.map((img:any)=>(<CarouselItem>
+        <img 
+          src={img.imageUrl} 
+          alt={`Product ${product.title}`} 
+          className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" 
+        />
+    </CarouselItem>))
+    
+
+
+              )}
+  </CarouselContent>
+  <CarouselPrevious />
+  <CarouselNext />
+</Carousel>
+             
+              <div className="p-3 w-full my-2 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-lg">{product.title}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFavoriteToggle(product.id);
                     }}
-                >
-                    <Popup className="p-1" minWidth={680}>
-                        <div className="flex flex-col items-center p-1">
-                            {product?.images[0]?.imageUrl && (
-                                <img src={product?.images[0]?.imageUrl} alt={`Product ${product.title}`} className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" />
-                            )}
-                            <div className="p-3 w-full my-2 rounded-md  ">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-semibold text-lg">{product.title}</span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleFavoriteClick(product.id)}
-                                    >
-                                        <Heart className={`h-5 w-5 ${product.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
-                                    </Button>
-                                </div>
-                                <p className="text-md" >{product.description}</p>
-                                <div className="flex gap-3">
+                  >
+                    <Heart className={`h-5 w-5 ${favoriteProductIds.includes(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+                  </Button>
+                </div>
+                <p className="text-md" >{product.description}</p>
+                <div className="flex gap-3">
 
-                                <div className="flex items-center text-lg text-yellow-950">
-                                        <CircleDollarSign size={18} className="mr-1" />
-                                        <span>price: {product.price}</span>
-                                    </div>
-                                
-                                    <div className="flex items-center text-lg text-gray-500">
-                                        <MapPin size={16} className="mr-1" />
-                                        <span>{product.address}</span>
-                                    </div>
-                               
-                                </div>
-                            </div>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
-        </MapContainer>
+                  <div className="flex items-center text-lg text-yellow-950">
+                    <CircleDollarSign size={18} className="mr-1" />
+                    <span>price: {product.price}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-lg text-gray-500">
+                    <MapPin size={16} className="mr-1" />
+                    <span>{product.address}</span>
+                  </div>
+                 
+                </div>
+              </div>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </MapContainer>
   )
 }

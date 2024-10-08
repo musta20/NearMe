@@ -253,8 +253,10 @@ export async function getAllProductsOld() {
         },
       },
       images: {
-        where: { isPrimary: true },
-        take: 1,
+        orderBy: [
+          { isPrimary: 'desc' },
+          { order: 'asc' }
+        ]
       },
     },
     take: 20, // Limit to 20 records
@@ -529,4 +531,45 @@ export async function toggleFavorite(userId: string, productId: string) {
     });
     return { isFavorite: true };
   }
+}
+
+export async function getFavoriteProductIds(userId: string) {
+  const favorites = await prisma.favorite.findMany({
+    where: {
+      userId,
+    },
+    select: {
+      productId: true,
+    },
+  });
+
+  return favorites.map(favorite => favorite.productId);
+}
+
+export async function removeFavorite(userId: string, productId: string) {
+  const existingFavorite = await prisma.favorite.findUnique({
+    where: {
+      userId_productId: {
+        userId,
+        productId,
+      },
+    },
+  });
+
+  if (existingFavorite) {
+    await prisma.favorite.delete({
+      where: { id: existingFavorite.id },
+    });
+    return { isFavorite: false };
+  }
+  
+  //  else {
+  //   await prisma.favorite.create({
+  //     data: {
+  //       userId,
+  //       productId,
+  //     },
+  //   });
+  //   return { isFavorite: true };
+  // }
 }
