@@ -1,5 +1,3 @@
-'use client'
-
 import React from 'react'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -25,56 +23,110 @@ import {
 } from "~/components/ui/select"
 import { toast } from "~/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { MapPin } from 'lucide-react'
+import { Switch } from "~/components/ui/switch"
+import { getAllCategories, createProduct } from "~/lib/action"
+import { useLoaderData, json, useActionData, redirect, useSubmit } from "@remix-run/react"
+import { LoaderFunction, ActionFunction } from "@remix-run/node"
+import { authenticator } from "~/services/auth.server"
+import DraggableMarker from '~/ui/product/DraggableMarker.client'
+import { ClientOnly } from 'remix-utils/client-only'
 
 const productFormSchema = z.object({
-  name: z.string().min(2, {
+  title: z.string().min(2, {
     message: "Product name must be at least 2 characters.",
   }),
   description: z.string().min(10, {
     message: "Product description must be at least 10 characters.",
   }),
-  category: z.string({
+  categoryId: z.string({
     required_error: "Please select a product category.",
   }),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, {
     message: "Please enter a valid price (e.g., 10.99)",
   }),
-  stock: z.string().regex(/^\d+$/, {
-    message: "Please enter a valid stock quantity.",
-  }),
-  location: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }),
+  inStock: z.boolean(),
+  latitude: z.number(),
+  longitude: z.number(),
+  address: z.string(),
 })
 
 type ProductFormValues = z.infer<typeof productFormSchema>
 
 const defaultValues: Partial<ProductFormValues> = {
-  name: "",
+  title: "",
   description: "",
-  category: "",
+  categoryId: "",
   price: "",
-  stock: "",
-  location: { lat: 40.7128, lng: -74.0060 }, // Default to New York City coordinates
+  inStock: true,
+  latitude: 40.7128,
+  longitude: -74.0060,
+  address: "",
 }
 
+export const loader: LoaderFunction = async ({ request }) => {
+  await authenticator.isAuthenticated(request, {
+    failureRedirect: "/login",
+  });
+  const categories = await getAllCategories()
+  return json({ categories })
+}
+
+export const action: ActionFunction = async ({ request }) => {
+  const user = await authenticator.isAuthenticated(request, {
+    failureRedirect: "/login",
+  });
+
+  const formData = await request.formData();
+  const productData = Object.fromEntries(formData);
+
+  try {
+    const newProduct = await createProduct({
+      ...productData,
+      sellerId: user.id,
+      price: parseFloat(productData.price as string),
+      inStock: productData.inStock === 'true',
+      latitude: parseFloat(productData.latitude as string),
+      longitude: parseFloat(productData.longitude as string),
+    });
+
+    return redirect(`/products/${newProduct.id}/edit`);
+  } catch (error) {
+    console.error(error);
+    return json({ error: "Failed to create product" }, { status: 400 });
+  }
+};
+
 export default function CreateProduct() {
+  const submit = useSubmit();
+  const { categories } = useLoaderData<typeof loader>()
+  const actionData = useActionData<typeof action>()
+  const [position, setPosition] = React.useState([defaultValues.latitude, defaultValues.longitude]);
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues,
     mode: "onChange",
   })
 
-  const [mapCenter, setMapCenter] = React.useState(defaultValues.location)
+  React.useEffect(() => {
+    if (actionData?.error) {
+      toast({
+        title: "Error",
+        description: actionData.error,
+        variant: "destructive",
+      })
+    }
+  }, [actionData])
+
+  React.useEffect(() => {
+    if (position) {
+      form.setValue("latitude", position[0]);
+      form.setValue("longitude", position[1]);
+    }
+  }, [position, form]);
 
   function onSubmit(data: ProductFormValues) {
-    toast({
-      title: "Product created",
-      description: "Your product has been successfully created.",
-    })
-    console.log(data)
+    submit(data, { method: "post" });
   }
 
   return (
@@ -86,10 +138,10 @@ export default function CreateProduct() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form method="post" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
                 control={form.control}
-                name="name"
+                name="title"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Product Name</FormLabel>
@@ -119,7 +171,7 @@ export default function CreateProduct() {
               />
               <FormField
                 control={form.control}
-                name="category"
+                name="categoryId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
@@ -130,11 +182,11 @@ export default function CreateProduct() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="electronics">Electronics</SelectItem>
-                        <SelectItem value="clothing">Clothing</SelectItem>
-                        <SelectItem value="home">Home & Kitchen</SelectItem>
-                        <SelectItem value="books">Books</SelectItem>
-                        <SelectItem value="toys">Toys & Games</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -157,43 +209,52 @@ export default function CreateProduct() {
                 />
                 <FormField
                   control={form.control}
-                  name="stock"
+                  name="inStock"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stock</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          In Stock
+                        </FormLabel>
+                        <FormDescription>
+                          Is this product currently in stock?
+                        </FormDescription>
+                      </div>
                       <FormControl>
-                        <Input placeholder="0" {...field} />
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               <FormField
                 control={form.control}
-                name="location"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <div className="h-[300px] bg-gray-100 relative">
-                        {/* Map placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <p className="text-gray-500">Map View (Placeholder)</p>
-                        </div>
-                        {/* Centered pin */}
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                          <MapPin className="text-red-500" size={32} />
-                        </div>
-                      </div>
+                      <Input placeholder="Enter address" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      Drag the map to position the pin at your product's location.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <input type="hidden" name="latitude" value={position[0]} />
+              <input type="hidden" name="longitude" value={position[1]} />
+              <div className="h-[300px] bg-gray-100 my-5 overflow-hidden">
+                <ClientOnly fallback={<div>Loading map...</div>}>
+                  {() => (
+                    <DraggableMarker setPosition={setPosition} productPostion={position} />
+                  )}
+                </ClientOnly>
+              </div>
+              <FormDescription>
+                Drag the map to position the pin at your product's location.
+              </FormDescription>
               <Button type="submit">Create Product</Button>
             </form>
           </Form>

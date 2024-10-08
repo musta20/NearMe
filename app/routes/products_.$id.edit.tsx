@@ -22,11 +22,19 @@ import {
 } from "~/components/ui/select"
 import { toast } from "~/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { MapPin } from 'lucide-react'
-import { LoaderFunction, json } from "@remix-run/node"
-import { useLoaderData } from "@remix-run/react"
-import { getProduct, getAllCategories } from "~/lib/action"
+import { LoaderFunction, json, redirect } from "@remix-run/node"
+import { useLoaderData, useActionData, useSubmit } from "@remix-run/react"
+import { getProduct, getAllCategories, updateProduct } from "~/lib/action"
 import { authenticator } from "~/services/auth.server"
+import { ProductImageGallery } from "~/components/ui/ProductImageGallery"
+import { getProductImages } from "~/lib/action"
+import DraggableMarker from '~/ui/product/DraggableMarker.client'
+import { ClientOnly } from 'remix-utils/client-only'
+import { useState, useEffect } from "react"
+import { useFetcher } from "@remix-run/react"
+import { ActionFunction } from "@remix-run/node";
+import { Form as RemixForm } from "@remix-run/react";
+import { Switch } from "~/components/ui/switch"
 
 const productFormSchema = z.object({
   title: z.string().min(2, {
@@ -44,9 +52,55 @@ const productFormSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
   address: z.string(),
+  inStock: z.boolean(),
 })
 
 type ProductFormValues = z.infer<typeof productFormSchema>
+
+export const action: ActionFunction = async ({ request, params }) => {
+  const userId = await authenticator.isAuthenticated(request, {
+    failureRedirect: "/login",
+  });
+
+  const formData = await request.formData();
+  const productId = params.id;
+
+  if (!productId) {
+    return json({ error: "Product ID is required" }, { status: 400 });
+  }
+
+  const product = await getProduct(productId);
+
+  if (!product || product.sellerId !== userId.id) {
+    return json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const categoryId = formData.get("categoryId") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const latitude = parseFloat(formData.get("latitude") as string);
+  const longitude = parseFloat(formData.get("longitude") as string);
+  const address = formData.get("address") as string;
+  const inStock = formData.get("inStock") === "true";
+
+  try {
+    await updateProduct(productId, {
+      title,
+      description,
+      categoryId,
+      price,
+      latitude,
+      longitude,
+      address,
+      inStock,
+    });
+
+    return json({ success: true });
+  } catch (error) {
+    return json({ error: "Failed to update product" }, { status: 500 });
+  }
+};
 
 export const loader: LoaderFunction = async ({ params, request }) => {
   const userId = await authenticator.isAuthenticated(request, {
@@ -66,19 +120,27 @@ export const loader: LoaderFunction = async ({ params, request }) => {
   if (!product) {
     throw new Response("Not Found", { status: 404 });
   }
-  console.log(product.sellerId)
-  console.log(userId.id)
-
+   
   // Check if the current user is the owner of the product
   if (product.sellerId !== userId.id) {
     throw new Response("Unauthorized", { status: 403 });
   }
 
-  return json({ product, categories });
+  // Fetch product images as well
+  const productImages = await getProductImages(productId);
+
+  return json({ product, categories, productImages });
 };
 
 export default function EditProduct() {
-  const { product, categories } = useLoaderData<typeof loader>();
+  const submit = useSubmit();
+  const { product, categories, productImages } = useLoaderData<typeof loader>();
+  const actionData = useActionData();
+  const [_productImages, setProductImages] = useState(productImages);
+  const [newposition, setPosition] = useState([product.latitude, product.longitude]);
+  const imageFetcher = useFetcher();
+  const primaryImageFetcher = useFetcher();
+  const deleteImageFetcher = useFetcher();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -90,17 +152,115 @@ export default function EditProduct() {
       latitude: product.latitude,
       longitude: product.longitude,
       address: product.address,
+      inStock: product.inStock,
     },
     mode: "onChange",
-  })
+  });
+
+  useEffect(() => {
+    //console.log(newposition.lat)
+    //console.log(newposition.lng)
+     if (newposition) {
+      form.setValue("latitude", newposition[0]);
+      form.setValue("longitude", newposition[1]);
+    }
+  }, [newposition, form]);
 
   function onSubmit(data: ProductFormValues) {
-    toast({
-      title: "Product updated",
-      description: "Your product has been successfully updated.",
-    })
-    console.log(data)
+    submit(data, { method: "post" });
   }
+
+  const handleDeleteImage = async (imageId: string) => {
+    const formData = new FormData();
+    formData.append("imageId", imageId);
+    formData.append("productId", product.id);
+
+    deleteImageFetcher.submit(formData, {
+      method: "POST",
+      action: "/api/delete-image",
+    });
+  };
+
+  const handleUploadImage = async (files: FileList) => {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("file", files[i]);
+    }
+    formData.append("productId", product.id);
+
+    imageFetcher.submit(formData, {
+      method: "POST",
+      action: "/api/upload-image",
+      encType: "multipart/form-data",
+    });
+  };
+
+  const handleSetPrimaryImage = async (imageId: string) => {
+    const formData = new FormData();
+    formData.append("imageId", imageId);
+    formData.append("productId", product.id);
+
+    primaryImageFetcher.submit(formData, {
+      method: "POST",
+      action: "/api/set-primary-image",
+    });
+  };
+
+  useEffect(() => {
+    if (imageFetcher.data?.images) {
+      // Add the new images to the productImages state
+      setProductImages([...productImages, ...imageFetcher.data.images]);
+    }
+  }, [imageFetcher.data]);
+
+  useEffect(() => {
+    if (primaryImageFetcher.data?.success) {
+      // Update the local state to reflect the new primary image
+      setProductImages(prevImages => 
+        prevImages.map(img => ({
+          ...img,
+          isPrimary: img.id === primaryImageFetcher.data.primaryImage.id
+        }))
+      );
+      toast({
+        title: "Primary image updated",
+        description: "The primary image has been successfully updated.",
+      });
+    }
+  }, [primaryImageFetcher.data]);
+
+  useEffect(() => {
+    if (deleteImageFetcher.data?.success) {
+      // Remove the deleted image from the local state
+      setProductImages(prevImages => prevImages.filter(img => img.id !== deleteImageFetcher.data.deletedImageId));
+      toast({
+        title: "Image deleted",
+        description: "The image has been successfully deleted.",
+      });
+    } else if (deleteImageFetcher.data?.error) {
+      toast({
+        title: "Error",
+        description: deleteImageFetcher.data.error,
+        variant: "destructive",
+      });
+    }
+  }, [deleteImageFetcher.data]);
+
+  useEffect(() => {
+    if (actionData?.success) {
+      toast({
+        title: "Product updated",
+        description: "Your product has been successfully updated.",
+        variant: "default",
+      });
+    } else if (actionData?.error) {
+      toast({
+        title: "Update failed",
+        description: actionData.error,
+        variant: "destructive",
+      });
+    }
+  }, [actionData]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -110,8 +270,8 @@ export default function EditProduct() {
           <CardDescription>Update your product details</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <RemixForm method="post" onSubmit={form.handleSubmit(onSubmit)}>
+            <Form {...form}>
               <FormField
                 control={form.control}
                 name="title"
@@ -192,24 +352,60 @@ export default function EditProduct() {
                   </FormItem>
                 )}
               />
-              <div className="h-[300px] bg-gray-100 relative">
-                {/* Map placeholder */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-gray-500">Map View (Placeholder)</p>
-                </div>
-                {/* Centered pin */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <MapPin className="text-red-500" size={32} />
-                </div>
+              <input type="hidden" name="latitude" value={newposition[0]} />
+              <input type="hidden" name="longitude" value={newposition[1]} />
+              <div className="h-[300px] bg-gray-100 my-5 overflow-hidden">
+                <ClientOnly fallback={<div>Loading map...</div>}>
+                  {() => (
+                    <DraggableMarker setPosition={setPosition} productPostion={newposition} />
+                  )}
+                </ClientOnly>
               </div>
               <FormDescription>
                 Drag the map to position the pin at your product's location.
               </FormDescription>
-              <Button type="submit">Update Product</Button>
-            </form>
-          </Form>
+              <FormField
+                control={form.control}
+                name="inStock"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        In Stock
+                      </FormLabel>
+                      <FormDescription>
+                        Toggle if the product is currently in stock
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Product Images</h3>
+                <ProductImageGallery
+                  images={_productImages}
+                  onDelete={handleDeleteImage}
+                  onUpload={handleUploadImage}
+                  onSetPrimary={handleSetPrimaryImage}
+                />
+              </div>
+
+              <Button type="submit" className="my-2" >Update Product</Button>
+            </Form>
+          </RemixForm>
         </CardContent>
       </Card>
+      {actionData?.error && (
+        <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
+          {actionData.error}
+        </div>
+      )}
     </div>
   )
 }

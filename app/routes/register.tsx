@@ -48,8 +48,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
-  console.log(userId)
- // if (userId) return redirect("/");
+  // if (userId) return redirect("/");
   return null;
 };
 

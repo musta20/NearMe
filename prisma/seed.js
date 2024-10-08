@@ -26,7 +26,7 @@ async function seed() {
   console.log("✅ Categories seeded");
 
   // Create users
-  //Shanel.Sawayn51@gmail.com
+  //Erick_Moen6@yahoo.com
   const users = [];
   for (let i = 0; i < 10; i++) {
     const user = await prisma.user.create({
@@ -35,6 +35,7 @@ async function seed() {
         username: faker.internet.userName(),
         bio: faker.person.bio(),
         name: faker.person.fullName(),
+        avatarImage:faker.image.avatar(),
         address: faker.location.streetAddress(),
         passwordHash: await bcrypt.hash("password123", 10),
         phoneNumber: faker.phone.number(),
@@ -91,6 +92,7 @@ async function seed() {
           categoryId: faker.helpers.arrayElement(categories).id,
           title: faker.commerce.productName(),
           description: faker.commerce.productDescription(),
+          inStock:faker.helpers.arrayElement([true,false]),
           price: parseFloat(faker.commerce.price()),
           latitude: latitude,
           longitude: longitude,

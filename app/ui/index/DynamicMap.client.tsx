@@ -1,7 +1,6 @@
  
  
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Product } from '~/db/definitions'
 import { MapPin, CircleDollarSign } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
@@ -95,6 +94,7 @@ export default function DynamicMap({ products,posix, selectedProductId }: Dynami
                             )}
                             <div className="p-3 w-full my-2 rounded-md border">
                                 <span className="font-semibold text-lg">{product.title}</span>
+                                <p>{product.description}</p>
                                 <div className="flex gap-3">
 
                                 <div className="flex items-center text-md text-yellow-950">

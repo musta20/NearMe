@@ -113,8 +113,7 @@ export default function SellerProductList() {
   }
 
   const handleDeleteConfirm = () => {
-    console.log(productToDelete)
-     if (productToDelete) {
+      if (productToDelete) {
       const formData = new FormData()
       formData.append('_action', 'deleteProduct')
       formData.append('productId', productToDelete.id)

@@ -13,14 +13,14 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form"
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { toast } from "~/hooks/use-toast"
+ import { toast } from "~/hooks/use-toast"
 import { ActionFunction, LoaderFunctionArgs } from "@remix-run/node"
 import { authenticator } from "~/services/auth.server"
 import { useLoaderData, useActionData, json, Form as RemixForm, useSubmit } from "@remix-run/react"
 import { getUser, updateUser } from "~/lib/action"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { AvatarUpload } from "~/components/AvatarUpload";
+import { Card, CardContent, CardHeader } from "~/components/ui/card"
 
 const profileFormSchema = z.object({
   username: z
@@ -74,6 +74,7 @@ export default function ProfileEditPage() {
   const user = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -106,18 +107,20 @@ export default function ProfileEditPage() {
     submit(data, { method: "post" });
   }
 
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    setAvatarUrl(newAvatarUrl);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <div className="flex items-center space-x-4">
-            <Avatar className="w-20 h-20">
-              <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-2xl font-bold">Edit Profile</CardTitle>
-              <CardDescription>Update your personal information</CardDescription>
-            </div>
+          <div className="flex items-center mx-auto space-x-4">
+            <AvatarUpload
+              currentAvatarUrl={avatarUrl}
+              user={user}
+              onAvatarUpdate={handleAvatarUpdate}
+            />
           </div>
         </CardHeader>
         <CardContent>

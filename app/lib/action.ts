@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import fs from 'fs/promises';
+import path from 'path';
+import { prisma } from "~/db.server";
 
 const prisma = new PrismaClient();
 
@@ -10,13 +13,16 @@ const UserSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(6),
   phoneNumber: z.string().optional(),
+  avatarImage: z.string()
 });
 
 const ProductSchema = z.object({
   sellerId: z.string().uuid(),
+  categoryId: z.string().uuid(),
   title: z.string().min(1).max(100),
   description: z.string(),
   price: z.number().positive(),
+  inStock: z.boolean(),
   latitude: z.number(),
   longitude: z.number(),
   address: z.string(),
@@ -24,7 +30,7 @@ const ProductSchema = z.object({
 
 const ProductImageSchema = z.object({
   productId: z.string().uuid(),
-  imageUrl: z.string().url(),
+  imageUrl: z.string(),
   order: z.number().int().nonnegative(),
   isPrimary: z.boolean(),
 });
@@ -63,6 +69,7 @@ export async function updateUser(id: string, data: Partial<z.infer<typeof UserSc
     validatedData.passwordHash = await bcrypt.hash(validatedData.password, 10);
     delete validatedData.password;
   }
+  console.log(validatedData)
   return prisma.user.update({ where: { id }, data: validatedData });
 }
 
@@ -71,19 +78,38 @@ export async function deleteUser(id: string) {
 }
 
 // Product CRUD
-export async function createProduct(data: z.infer<typeof ProductSchema>) {
+export async function createProduct(data: any) {
   const validatedData = ProductSchema.parse(data);
-  return prisma.product.create({ data: validatedData });
+  return prisma.product.create({
+    data: {
+      title: validatedData.title,
+      description: validatedData.description,
+      price: validatedData.price,
+      inStock: validatedData.inStock,
+      latitude: validatedData.latitude,
+      longitude: validatedData.longitude,
+      address: validatedData.address,
+      seller: {
+        connect: { id: validatedData.sellerId }
+      },
+      category: {
+        connect: { id: validatedData.categoryId }
+      }
+    },
+  });
 }
 
 export async function getProduct(id: string) {
   return prisma.product.findUnique({ where: { id } });
 }
 
-export async function updateProduct(id: string, data: Partial<z.infer<typeof ProductSchema>>) {
- // const validatedData = ProductSchema.partial().parse(data);
- // return prisma.product.update({ where: { id }, data: validatedData });
-}
+// export async function updateProduct(id: string, data: z.infer<typeof ProductUpdateSchema>) {
+//   const validatedData = ProductUpdateSchema.parse(data);
+//   return prisma.product.update({
+//     where: { id },
+//     data: validatedData,
+//   });
+// }
 
 export async function deleteProduct(id: string) {
   // Start a transaction to ensure all operations succeed or fail together
@@ -127,7 +153,7 @@ export async function updateProductImage(id: string, data: Partial<z.infer<typeo
   return prisma.productImage.update({ where: { id }, data: validatedData });
 }
 
-export async function deleteProductImage(id: string) {
+export async function deleteProductImageOld(id: string) {
   return prisma.productImage.delete({ where: { id } });
 }
 
@@ -215,7 +241,7 @@ export async function getAllProductsOld() {
         take: 1,
       },
     },
-    take: 10,
+    take: 20, // Limit to 20 records
     orderBy: {
       createdAt: 'desc',
     },
@@ -304,4 +330,161 @@ export async function getAllCategories() {
       name: 'asc',
     },
   });
+}
+
+export async function getProductImages(productId: string) {
+  return prisma.productImage.findMany({
+    where: { productId },
+    orderBy: { order: 'asc' },
+  });
+}
+
+export async function setPrimaryProductImage(imageId: string, productId: string) {
+  return prisma.$transaction(async (tx) => {
+    // Unset the current primary image
+    await tx.productImage.updateMany({
+      where: { productId, isPrimary: true },
+      data: { isPrimary: false },
+    });
+
+    // Set the new primary image
+    const updatedImage = await tx.productImage.update({
+      where: { id: imageId },
+      data: { isPrimary: true },
+    });
+
+    return updatedImage;
+  });
+}
+
+export async function deleteProductImage(imageId: string, productId: string) {
+  return prisma.$transaction(async (tx) => {
+    // Get the image details
+    const image = await tx.productImage.findUnique({
+      where: { id: imageId },
+    });
+
+    if (!image) {
+      throw new Error("Image not found");
+    }
+
+    // Delete the image file if it exists
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    const filename = path.basename(image.imageUrl);
+    const filePath = path.join(uploadDir, filename);
+
+    try {
+      await fs.access(filePath);
+      await fs.unlink(filePath);
+    } catch (error) {
+      console.error("Error deleting image file:", error);
+      // Continue with database deletion even if file deletion fails
+    }
+
+    // Delete the image from the database
+    const deletedImage = await tx.productImage.delete({
+      where: { id: imageId },
+    });
+
+    // If the deleted image was primary, set a new primary image
+    if (deletedImage.isPrimary) {
+      const nextImage = await tx.productImage.findFirst({
+        where: { productId },
+        orderBy: { order: 'asc' },
+      });
+
+      if (nextImage) {
+        await tx.productImage.update({
+          where: { id: nextImage.id },
+          data: { isPrimary: true },
+        });
+      }
+    }
+
+    return deletedImage;
+  });
+}
+
+const ProductUpdateSchema = z.object({
+  title: z.string().min(2).max(100).optional(),
+  description: z.string().min(10).optional(),
+  categoryId: z.string().uuid().optional(),
+  price: z.number().positive().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  address: z.string().optional(),
+  inStock: z.boolean().optional(),
+});
+
+export async function updateProduct(id: string, data: z.infer<typeof ProductUpdateSchema>) {
+  const validatedData = ProductUpdateSchema.parse(data);
+  return prisma.product.update({
+    where: { id },
+    data: validatedData,
+  });
+}
+
+export async function getFilteredProducts(filters: {
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  search?: string;
+  inStock?: boolean;
+  orderBy?: string;
+}) {
+  const { category, minPrice, maxPrice, search, inStock, orderBy } = filters;
+
+  const where: any = {};
+
+  if (category) {
+    where.category = {
+      name: category
+    };
+  }
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+    if (minPrice !== undefined) where.price.gte = minPrice;
+    if (maxPrice !== undefined) where.price.lte = maxPrice;
+  }
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } }
+    ];
+  }
+
+  if (inStock) {
+    where.inStock = true;
+  }
+
+  let orderByClause: any = { createdAt: 'desc' }; // Default ordering
+
+  switch (orderBy) {
+    case 'price_asc':
+      orderByClause = { price: 'asc' };
+      break;
+    case 'price_desc':
+      orderByClause = { price: 'desc' };
+      break;
+    case 'date_desc':
+      orderByClause = { createdAt: 'desc' };
+      break;
+    case 'date_asc':
+      orderByClause = { createdAt: 'asc' };
+      break;
+  }
+
+  const products = await prisma.product.findMany({
+    where,
+    include: {
+      images: true,
+      category: true,
+    },
+    orderBy: orderByClause,
+    take: 20, // Limit to 20 records
+  });
+
+  return products;
 }
