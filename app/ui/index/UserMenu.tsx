@@ -1,5 +1,5 @@
 import { Link } from '@remix-run/react'
-import { User, LogOut, ShoppingBag } from 'lucide-react'
+import { User, LogOut, ShoppingBag, Mail } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import { PopoverContent } from '~/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
@@ -45,7 +45,7 @@ export function UserMenu({ user, onOpenChange }: UserMenuProps) {
               </Avatar>
               <div>
                 <div className="font-medium">{user.username}</div>
-                <div className="text-sm text-gray-500">{user.email}</div>
+                <div className="text-xs text-gray-500">{user.email}</div>
               </div>
             </div>
             <hr />
@@ -59,6 +59,12 @@ export function UserMenu({ user, onOpenChange }: UserMenuProps) {
               <Link to="/products" className="flex items-center">
                 <ShoppingBag className="mr-2 h-4 w-4" />
                 <span>Products</span>
+              </Link>
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" asChild onClick={handleLinkClick}>
+              <Link to="/mail" className="flex items-center">
+                <Mail className="mr-2 h-4 w-4" />
+                <span>mail</span>
               </Link>
             </Button>
             <hr />

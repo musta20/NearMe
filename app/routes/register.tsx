@@ -1,5 +1,3 @@
-'use client'
-
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -19,6 +17,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { json, Link, useActionData, useSubmit } from '@remix-run/react'
 import { Icons } from '~/ui/icons'
 import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
+import { authenticator } from "~/services/auth.server"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -47,8 +46,8 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUserId(request);
-  // if (userId) return redirect("/");
+  const user = await authenticator.isAuthenticated(request);
+ if (user) return redirect("/");
   return null;
 };
 

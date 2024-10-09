@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { MapPin, CircleDollarSign, Heart, Star, MessageCircle } from "lucide-react";
+import { MapPin, CircleDollarSign, Heart, Star, MessageCircle, Mail, X } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
@@ -13,7 +13,8 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "~/components/ui/carousel"
+} from "~/components/ui/carousel";
+import { SendMessageForm } from '~/components/SendMessageForm';
 
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
   const map = useMap();
@@ -26,9 +27,10 @@ interface DynamicMapProps {
   posix: [number,number]
   selectedProductId: string | null
   favoriteProductIds: string[] // Add this line
+  user: any // Add this line
 }
 
-export default function DynamicMap({ products, posix, selectedProductId, favoriteProductIds }: DynamicMapProps) {
+export default function DynamicMap({ products, posix, selectedProductId, favoriteProductIds, user }: DynamicMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null)
   const [center, setCenter] = useState(posix);
   const [zoom, setZoom] = useState(18);
@@ -37,6 +39,8 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
   const navigate = useNavigate();
   const mapRef = useRef<L.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [isMessageFormOpen, setIsMessageFormOpen] = useState(false);
+  const [selectedProductForMessage, setSelectedProductForMessage] = useState(null);
 
   useEffect(() => {
     if (isMapReady && selectedProductId) {
@@ -88,58 +92,72 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
     navigate(`/?selectedProductId=${productId}`, { replace: true });
   };
 
+  const handleContactSeller = (productId: string) => {
+    navigate(`/send-message/${productId}`);
+  };
+
+  const handleClosePopup = (marker: L.Marker) => {
+    marker.closePopup();
+  };
+
   if (!position) {
     return <p>Loading map...</p>
   }
 
-  return (
-    <MapContainer
-      center={center}
-      zoom={zoom}
-      scrollWheelZoom={true}
-      style={{ height: "100%", width: "100%" }}
-      ref={(map) => {
-        mapRef.current = map;
-        if (map) {
-          setIsMapReady(true);
-        }
-      }}
-    >
-      <ChangeView center={center} zoom={zoom} />
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      {products.map((product :any) => (
-        <Marker 
-          key={product.id} 
-          position={[product.latitude, product.longitude]}
-          ref={(ref) => {
-            if (ref) {
-              markerRefs.current[product.id] = ref;
-            }
-          }}
-          eventHandlers={{
-            click: () => handleProductClick(product.id)
-          }}
-        >
-          <Popup className="p-1" minWidth={680}>
-            <div className="flex flex-col items-center p-1">
-              <Carousel>
-                <CarouselContent>
+  return (<MapContainer
+        center={center}
+        zoom={zoom}
+        scrollWheelZoom={true}
+        style={{ height: "100%", width: "100%" }}
+        ref={(map) => {
+          mapRef.current = map;
+          if (map) {
+            setIsMapReady(true);
+          }
+        }}
+      >
+        <ChangeView center={center} zoom={zoom} />
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {products.map((product :any) => (
+          <Marker 
+            key={product.id} 
+            position={[product.latitude, product.longitude]}
+            ref={(ref) => {
+              if (ref) {
+                markerRefs.current[product.id] = ref;
+              }
+            }}
+            eventHandlers={{
+              click: () => handleProductClick(product.id)
+            }}
+          >
+            <Popup className="p-1" closeButton={false} minWidth={680}>
+            <button 
+                  className="absolute -top-2 right-2 p-1 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors duration-200"
+                  onClick={() => handleClosePopup(markerRefs.current[product.id])}
+                >
+                  <X className="h-4 w-4 text-gray-600" />
+                </button>
+              <div className="relative flex flex-col items-center ">
+        
+                <Carousel>
+                  <CarouselContent>
 
-                  {product.images && product.images.length > 0 && (
-                    product?.images.map((img:any)=>(<CarouselItem>
-                      <img 
-                        src={img.imageUrl} 
-                        alt={`Product ${product.title}`} 
-                        className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" 
-                      />
-                  </CarouselItem>))
+                    {product.images && product.images.length > 0 && (
+                      product?.images.map((img:any)=>(<CarouselItem>
+                        <img 
+                          src={img.imageUrl} 
+                          alt={`Product ${product.title}`} 
+                          className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" 
+                        />
+                    </CarouselItem>))
     
 
 
-                )}
+                    )}
     </CarouselContent>
     <CarouselPrevious />
     <CarouselNext />
@@ -159,7 +177,18 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                     <Heart className={`h-5 w-5 ${favoriteProductIds.includes(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
                   </Button>
                 </div>
-                <p className="text-md" >{product.description}</p>
+               <div className="flex justify-between my-2"> <p className="text-md w-1/2" >{product.description}</p>
+                {user && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => handleContactSeller(product.id)}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Contact Seller
+                  </Button>
+                )}</div>
                 <div className="flex gap-3 items-center">
                   <div className="flex items-center text-lg text-yellow-950">
                     <CircleDollarSign size={18} className="mr-1" />
@@ -172,9 +201,10 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                   {product.averageRating !== null && (
                     <div className="flex items-center text-lg text-yellow-600">
                       <Star size={16} fill="yellow" className="mr-1" />
-                      <span>{product.averageRating.toFixed(1)}</span>
+                      <span>{product.averageRating?.toFixed(1)}</span>
                     </div>
                   )}
+                  
                 </div>
                 {/* Add Ratings and Comments Section */}
                 {product.ratings && product.ratings.length > 0 && (
@@ -199,11 +229,21 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                     ))}
                   </div>
                 )}
+                
+                
+
               </div>
             </div>
           </Popup>
         </Marker>
       ))}
+      {selectedProductForMessage && (
+        <SendMessageForm
+          product={selectedProductForMessage}
+          isOpen={isMessageFormOpen}
+          onClose={() => setIsMessageFormOpen(false)}
+        />
+      )}
     </MapContainer>
   )
 }

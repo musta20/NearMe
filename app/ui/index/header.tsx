@@ -66,16 +66,16 @@ export default function Header({user}: {user: any}) {
                 Favorites
               </Button>
               </Link>
-              <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full">
-                <Link to={"/products/new"}>
-                Become a seller
-                </Link>
-              </Button>
+ 
+
             </>
-          ) : (
+          ) : (              <Link to={"/register"}>
+
             <Button variant="ghost" className="text-gray-600 hover:bg-gray-100 rounded-full">
               Become a seller
             </Button>
+            </Link>
+
           )}
           <Popover open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
             <PopoverTrigger asChild>

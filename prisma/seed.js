@@ -25,6 +25,7 @@ async function seed() {
 
   console.log("✅ Categories seeded");
 
+  //Francisca.Bailey@hotmail.com
   // Create users
   const users = [];
   for (let i = 0; i < 10; i++) {
@@ -42,6 +43,20 @@ async function seed() {
     });
     users.push(user);
   }
+
+  const admin = await prisma.user.create({
+    data: {
+      email: "admin@admin.com",
+      username: faker.internet.userName(),
+      bio: faker.person.bio(),
+      name: faker.person.fullName(),
+      avatarImage: faker.image.avatar(),
+      address: faker.location.streetAddress(),
+      passwordHash: await bcrypt.hash("Aa123456", 10),
+      phoneNumber: faker.phone.number(),
+    },
+  });
+  users.push(admin);
 
   function generateRandomCoordinate(centerLat, centerLon, radiusInKm) {  
     const earthRadiusKm = 6371;

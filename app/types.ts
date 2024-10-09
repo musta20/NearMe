@@ -24,4 +24,5 @@ export interface Product {
       username: string;
     };
   }>;
+  averageRating: number | null;
 }

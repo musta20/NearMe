@@ -106,7 +106,42 @@ export async function createProduct(data: any) {
 }
 
 export async function getProduct(id: string) {
-  return prisma.product.findUnique({ where: { id } });
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      images: true,
+      category: true,
+      ratings: {
+        include: {
+          user: {
+            select: {
+              username: true
+            }
+          }
+        }
+      },
+      seller: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    return null;
+  }
+
+  // Calculate average rating
+  const averageRating = product.ratings.length > 0
+    ? calCaverageRating(product)
+    : null;
+
+  return {
+    ...product,
+    averageRating,
+  };
 }
 
 export async function getFavotite(userId: string){
@@ -676,4 +711,43 @@ export async function hasUserRatedProduct(userId: string, productId: string) {
   });
 
   return !!rating;
+}
+
+export async function getInboxMessages(userId: string) {
+  return prisma.message.findMany({
+    where: { receiverId: userId },
+    include: {
+      sender: {
+        select: { username: true }
+      },
+      product: {
+        select: {        title: true,
+          id:true,
+          images:true,
+          price:true }
+      }
+    },
+    orderBy: { sentAt: 'desc' }
+  });
+}
+
+export async function getSentMessages(userId: string) {
+  return prisma.message.findMany({
+    where: { senderId: userId },
+    include: {
+      receiver: {
+        select: { username: true }
+      },
+      product: {
+        select: { 
+          title: true,
+          id:true,
+          images:true,
+          price:true
+
+         }
+      }
+    },
+    orderBy: { sentAt: 'desc' }
+  });
 }

@@ -9,10 +9,11 @@ interface MainMapPageProps {
   products: Product[];
   categories: { id: string; name: string }[];
   selectedProduct: Product | null;
-  favoriteProductIds: string[]; // Add this line
+  favoriteProductIds: string[];
+  user: any; // Add this line
 }
 
-export default function MainMapPage({ products, categories, selectedProduct, favoriteProductIds }: MainMapPageProps) {
+export default function MainMapPage({ products, categories, selectedProduct, favoriteProductIds, user }: MainMapPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedProductId = searchParams.get('selectedProductId') || '';
 
@@ -41,6 +42,7 @@ export default function MainMapPage({ products, categories, selectedProduct, fav
               posix={[29.0586624, 31.1263232]}
               selectedProductId={selectedProductId} 
               favoriteProductIds={favoriteProductIds} // Add this line
+              user={user} // Add this line
             />
           )}
         </ClientOnly>
