@@ -28,6 +28,7 @@ model User {
   favorites     Favorite[]
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  ratings       Rating[]
 }
 
 model Product {
@@ -48,14 +49,13 @@ model Product {
   images      ProductImage[]
   favorites   Favorite[]
   messages    Message[]
+  ratings     Rating[]
 }
-
 
 model categories {
   id          String         @id @default(uuid())
   name        String         @unique
   products    Product[]
-
 }
 
 model ProductImage {
@@ -89,4 +89,18 @@ model Message {
   product    Product  @relation(fields: [productId], references: [id])
   content    String
   sentAt     DateTime @default(now())
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
 }

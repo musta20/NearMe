@@ -28,8 +28,7 @@ export const loader = async ({ request }: { request: Request }) => {
 
   // Fetch favorite product IDs
   const favoriteProductIds = user ? await getFavoriteProductIds(user.id) : [];
-
-  return json({ products, categories, selectedProduct, favoriteProductIds });
+   return json({ products, categories, selectedProduct, favoriteProductIds });
 };
 
 export default function Index() {

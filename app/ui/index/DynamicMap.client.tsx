@@ -1,7 +1,5 @@
- 
- 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { MapPin, CircleDollarSign, Heart } from "lucide-react";
+import { MapPin, CircleDollarSign, Heart, Star, MessageCircle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
@@ -16,7 +14,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "~/components/ui/carousel"
- 
+
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
   const map = useMap();
   map.setView(center, zoom);
@@ -127,27 +125,27 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
         >
           <Popup className="p-1" minWidth={680}>
             <div className="flex flex-col items-center p-1">
-            <Carousel>
-  <CarouselContent>
+              <Carousel>
+                <CarouselContent>
 
-    {product.images && product.images.length > 0 && (
-      product?.images.map((img:any)=>(<CarouselItem>
-        <img 
-          src={img.imageUrl} 
-          alt={`Product ${product.title}`} 
-          className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" 
-        />
-    </CarouselItem>))
+                  {product.images && product.images.length > 0 && (
+                    product?.images.map((img:any)=>(<CarouselItem>
+                      <img 
+                        src={img.imageUrl} 
+                        alt={`Product ${product.title}`} 
+                        className="w-full min-h-[10rem] max-h-[15rem] rounded-lg object-cover mr-4" 
+                      />
+                  </CarouselItem>))
     
 
 
-              )}
-  </CarouselContent>
-  <CarouselPrevious />
-  <CarouselNext />
-</Carousel>
+                )}
+    </CarouselContent>
+    <CarouselPrevious />
+    <CarouselNext />
+  </Carousel>
              
-              <div className="p-3 w-full my-2 rounded-md">
+              <div className="p-3 w-full my-2 border rounded-md">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-lg">{product.title}</span>
                   <Button
@@ -162,19 +160,45 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                   </Button>
                 </div>
                 <p className="text-md" >{product.description}</p>
-                <div className="flex gap-3">
-
+                <div className="flex gap-3 items-center">
                   <div className="flex items-center text-lg text-yellow-950">
                     <CircleDollarSign size={18} className="mr-1" />
                     <span>price: {product.price}</span>
                   </div>
-                  
                   <div className="flex items-center text-lg text-gray-500">
                     <MapPin size={16} className="mr-1" />
                     <span>{product.address}</span>
                   </div>
-                 
+                  {product.averageRating !== null && (
+                    <div className="flex items-center text-lg text-yellow-600">
+                      <Star size={16} fill="yellow" className="mr-1" />
+                      <span>{product.averageRating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
+                {/* Add Ratings and Comments Section */}
+                {product.ratings && product.ratings.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-lg mb-2">Ratings and Comments</h4>
+                    {product.ratings.map((rating: any) => (
+                      <div key={rating.id} className="mb-2 p-2 bg-gray-100 rounded">
+                        <div className="flex items-center">
+                          <span className="font-medium mr-2">{rating.user.username}</span>
+                          <div className="flex items-center text-yellow-600">
+                            <Star size={14} fill="yellow" className="mr-1" />
+                            <span>{rating.rating}</span>
+                          </div>
+                        </div>
+                        {rating.comment && (
+                          <p className="text-sm mt-1">
+                            <MessageCircle size={14} className="inline mr-1" />
+                            {rating.comment}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </Popup>

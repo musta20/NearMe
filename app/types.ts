@@ -16,5 +16,12 @@ export interface Product {
     imageUrl: string;
     order: number;
   }[];
-  // Add any other fields that your product object includes
+  ratings: Array<{
+    id: string;
+    value: number;
+    comment?: string;
+    user: {
+      username: string;
+    };
+  }>;
 }

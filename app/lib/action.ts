@@ -46,6 +46,14 @@ const MessageSchema = z.object({
   content: z.string().min(1),
 });
 
+// Rating Schema
+const RatingSchema = z.object({
+  userId: z.string().uuid(),
+  productId: z.string().uuid(),
+  value: z.number().int().min(1).max(5),
+  comment: z.string().optional(),
+});
+
 // User CRUD
 export async function createUser(data: z.infer<typeof UserSchema>) {
   const validatedData = UserSchema.parse(data);
@@ -244,7 +252,7 @@ export async function searchProducts(query: string) {
 
 // New function to get all products
 export async function getAllProductsOld() {
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     include: {
       seller: {
         select: {
@@ -258,12 +266,35 @@ export async function getAllProductsOld() {
           { order: 'asc' }
         ]
       },
+      ratings: {
+        include: {
+          user: {
+            select: {
+              username: true
+            }
+          }
+        }
+      },
     },
     take: 20, // Limit to 20 records
     orderBy: {
       createdAt: 'desc',
     },
   });
+
+  return products.map(product => ({
+    ...product,
+    averageRating: product.ratings && product.ratings.length > 0
+      ? calCaverageRating(product)
+      : null,
+  }));
+}
+const calCaverageRating = (product: any)=>{
+ //const val = Number((product.ratings.reduce((sum, rating) => sum + rating.value, 0) / product.ratings.length).toFixed(1))
+ if (product.ratings.length === 0) return 0;
+ const sum = product.ratings.reduce((acc, rating) => acc + rating.rating, 0);
+
+ return sum / product.ratings.length;
 }
 
 const PaginationSchema = z.object({
@@ -499,12 +530,18 @@ export async function getFilteredProducts(filters: {
     include: {
       images: true,
       category: true,
+      ratings: true, // Make sure this is included
     },
     orderBy: orderByClause,
     take: 20, // Limit to 20 records
   });
 
-  return products;
+  return products.map(product => ({
+    ...product,
+    averageRating: product.ratings && product.ratings.length > 0
+      ? Number((product.ratings.reduce((sum, rating) => sum + rating.value, 0) / product.ratings.length).toFixed(1))
+      : null,
+  }));
 }
 
 export async function toggleFavorite(userId: string, productId: string) {
@@ -572,4 +609,71 @@ export async function removeFavorite(userId: string, productId: string) {
   //   });
   //   return { isFavorite: true };
   // }
+}
+
+// Create Rating
+export async function createRating(data: z.infer<typeof RatingSchema>) {
+  const validatedData = RatingSchema.parse(data);
+  return prisma.rating.create({
+    data: validatedData,
+  });
+}
+
+// Read Rating
+export async function getRating(id: string) {
+  return prisma.rating.findUnique({
+    where: { id },
+  });
+}
+
+// Read Ratings for a Product
+export async function getProductRatings(productId: string) {
+  return prisma.rating.findMany({
+    where: { productId },
+    include: { user: { select: { username: true } } },
+  });
+}
+
+// Update Rating
+export async function updateRating(id: string, data: Partial<z.infer<typeof RatingSchema>>) {
+  const validatedData = RatingSchema.partial().parse(data);
+  return prisma.rating.update({
+    where: { id },
+    data: validatedData,
+  });
+}
+
+// Delete Rating
+export async function deleteRating(id: string) {
+  return prisma.rating.delete({
+    where: { id },
+  });
+}
+
+// Get Average Rating for a Product
+export async function getAverageRating(productId: string) {
+  const result = await prisma.rating.aggregate({
+    where: { productId },
+    _avg: { value: true },
+    _count: { value: true },
+  });
+
+  return {
+    averageRating: result._avg.value || 0,
+    totalRatings: result._count.value,
+  };
+}
+
+// Check if a user has already rated a product
+export async function hasUserRatedProduct(userId: string, productId: string) {
+  const rating = await prisma.rating.findUnique({
+    where: {
+      userId_productId: {
+        userId,
+        productId,
+      },
+    },
+  });
+
+  return !!rating;
 }

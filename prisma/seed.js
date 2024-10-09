@@ -26,7 +26,6 @@ async function seed() {
   console.log("✅ Categories seeded");
 
   // Create users
-  //Erick_Moen6@yahoo.com
   const users = [];
   for (let i = 0; i < 10; i++) {
     const user = await prisma.user.create({
@@ -35,7 +34,7 @@ async function seed() {
         username: faker.internet.userName(),
         bio: faker.person.bio(),
         name: faker.person.fullName(),
-        avatarImage:faker.image.avatar(),
+        avatarImage: faker.image.avatar(),
         address: faker.location.streetAddress(),
         passwordHash: await bcrypt.hash("password123", 10),
         phoneNumber: faker.phone.number(),
@@ -44,7 +43,7 @@ async function seed() {
     users.push(user);
   }
 
-  function generateRandomCoordinate(centerLat, centerLon, radiusInKm) {
+  function generateRandomCoordinate(centerLat, centerLon, radiusInKm) {  
     const earthRadiusKm = 6371;
     
     // Convert radius from kilometers to radians
@@ -77,6 +76,7 @@ async function seed() {
     const newLon = newLonRad * (180 / Math.PI);
     
     return { latitude: newLat, longitude: newLon };
+    // ... (keep the existing function as is)
   }
 
   // Create products
@@ -92,7 +92,7 @@ async function seed() {
           categoryId: faker.helpers.arrayElement(categories).id,
           title: faker.commerce.productName(),
           description: faker.commerce.productDescription(),
-          inStock:faker.helpers.arrayElement([true,false]),
+          inStock: faker.helpers.arrayElement([true, false]),
           price: parseFloat(faker.commerce.price()),
           latitude: latitude,
           longitude: longitude,
@@ -117,8 +117,11 @@ async function seed() {
       }
     }
   }
-
+  console.log("✅ productImage seeded");
+ 
   console.log("✅ Products and images seeded");
+
+  console.log("✅ Seed favorite successfully!");
 
   // Create favorites
   for (let i = 0; i < 100; i++) {
@@ -131,7 +134,9 @@ async function seed() {
       // Ignore unique constraint violations
     });
   }
+  console.log("✅ favorite seeded");
 
+  console.log("✅ Seed favorite successfully!");
   // Create messages
   for (let i = 0; i < 200; i++) {
     const [sender, receiver] = faker.helpers.arrayElements(users, 2);
@@ -144,6 +149,28 @@ async function seed() {
       },
     });
   }
+  console.log("✅ message seeded");
+
+  console.log("✅ Seed completed successfully!");
+
+  // Create ratings
+  for (let i = 0; i < 300; i++) {
+    const user = faker.helpers.arrayElement(users);
+    const product = faker.helpers.arrayElement(products);
+    
+    await prisma.rating.create({
+      data: {
+        userId: user.id,
+        productId: product.id,
+        rating: faker.number.int({ min: 1, max: 5 }),
+        comment: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.7 }),
+      },
+    }).catch(() => {
+      // Ignore unique constraint violations
+    });
+  }
+
+  console.log("✅ Ratings seeded");
 
   console.log("✅ Seed completed successfully!");
 }
