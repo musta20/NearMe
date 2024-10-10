@@ -47,9 +47,9 @@ async function seed() {
   const admin = await prisma.user.create({
     data: {
       email: "admin@admin.com",
-      username: faker.internet.userName(),
+      username: "admin",
       bio: faker.person.bio(),
-      name: faker.person.fullName(),
+      name: "admin",
       avatarImage: faker.image.avatar(),
       address: faker.location.streetAddress(),
       passwordHash: await bcrypt.hash("Aa123456", 10),

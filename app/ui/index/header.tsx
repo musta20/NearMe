@@ -33,7 +33,7 @@ export default function Header({user}: {user: any}) {
       <div className="container mx-auto flex items-center justify-between">
         <h1 className="text-2xl font-bold text-red-500">
           <Link to={"/"}>
-          nearbyProducts</Link>
+          nearbyProducts</Link><span className='p-3 text-xs text-stone-900'>beta</span>
         </h1>
         <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-4">
           <div className="relative">

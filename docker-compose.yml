@@ -1,5 +1,16 @@
- 
+version: '3.8'
+
 services:
+  remix-app:
+    build: 
+      context: ./docker
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
   postgres:
     image: postgres:latest
     ports:
