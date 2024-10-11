@@ -16,7 +16,7 @@ import {
  import { toast } from "~/hooks/use-toast"
 import { ActionFunction, LoaderFunctionArgs } from "@remix-run/node"
 import { authenticator } from "~/services/auth.server"
-import { useLoaderData, useActionData, json, Form as RemixForm, useSubmit } from "@remix-run/react"
+import { useLoaderData, useActionData, json, Form as RemixForm, useSubmit, MetaFunction } from "@remix-run/react"
 import { getUser, updateUser } from "~/lib/action"
 import { useEffect, useState } from "react"
 import { AvatarUpload } from "~/components/AvatarUpload";
@@ -49,7 +49,13 @@ const profileFormSchema = z.object({
 })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
-
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - profile" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 export const action: ActionFunction = async ({ request }) => {
   const userId = await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",

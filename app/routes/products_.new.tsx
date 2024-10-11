@@ -25,7 +25,7 @@ import { toast } from "~/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Switch } from "~/components/ui/switch"
 import { getAllCategories, createProduct } from "~/lib/action"
-import { useLoaderData, json, useActionData, redirect, useSubmit } from "@remix-run/react"
+import { useLoaderData, json, useActionData, redirect, useSubmit, MetaFunction } from "@remix-run/react"
 import { LoaderFunction, ActionFunction } from "@remix-run/node"
 import { authenticator } from "~/services/auth.server"
 import DraggableMarker from '~/ui/product/DraggableMarker.client'
@@ -62,7 +62,13 @@ const defaultValues: Partial<ProductFormValues> = {
   longitude: -74.0060,
   address: "",
 }
-
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - new product" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 export const loader: LoaderFunction = async ({ request }) => {
   await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",

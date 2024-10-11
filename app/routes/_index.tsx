@@ -1,9 +1,23 @@
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, MetaFunction } from "@remix-run/react";
 import MainMapPage from "~/ui/index/MainMapPage";
 import { getAllCategories, getAllProductsOld, getFilteredProducts, getFavoriteProductIds, getProduct } from "~/lib/action";
 import type { Product } from "~/types";
 import { authenticator } from "~/services/auth.server";
+
+// Update the meta export
+export const meta: MetaFunction = ({ data }) => {
+  const selectedProduct = data?.selectedProduct as Product | null;
+  const baseTitle = "NearMe - Find Products Nearby";
+  const title = selectedProduct 
+    ? `${selectedProduct.title} | ${baseTitle}`
+    : baseTitle;
+
+  return [
+    { title },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 
 export const loader = async ({ request }: { request: Request }) => {
   const user = await authenticator.isAuthenticated(request);

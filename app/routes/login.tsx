@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { AuthorizationError } from "remix-auth";
+
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -15,16 +17,11 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
 import { Separator } from "~/components/ui/separator"
 import { Checkbox } from "~/components/ui/checkbox"
-import { json, Link, useActionData, useSubmit } from '@remix-run/react'
+import { json, Link, useActionData, useSubmit, Form as RemixForm, useLoaderData } from '@remix-run/react'
 import { Icons } from '~/ui/icons'
-import { ActionFunction, ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs, redirect } from '@remix-run/node'
-import { authenticator } from "~/services/auth.server"
-import { useState } from "react"
+import { ActionFunctionArgs, LoaderFunction, LoaderFunctionArgs, redirect } from '@remix-run/node'
 
-import {
-  isRouteErrorResponse,
-  useRouteError,
-} from "@remix-run/react";
+import { authenticator } from "~/services/auth.server"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -35,9 +32,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-   const actionData = useActionData<typeof action>();
-  const error = useRouteError();
-
+  const { error } = useLoaderData<{ error: string | null }>();
+  const actionData = useActionData<{ error: string }>();
   const submit = useSubmit();
 
   const form = useForm<LoginFormValues>({
@@ -48,8 +44,10 @@ export default function LoginPage() {
       rememberMe: false,
     },
   })
+  useEffect(()=>{
+    console.log(actionData)
+  },[])
 
- 
   function onSubmit(data: LoginFormValues) {
     submit(data, { method: "post" });
   }
@@ -64,15 +62,11 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isRouteErrorResponse(error) && (
-                      <div className="text-red-600 text-center">error</div>
-          )
-                  }
-          {actionData?.formError && (
-            <div className="text-red-600 text-center">{actionData.formError}</div>
+          {(error || actionData?.error) && (
+            <div className="text-red-600 text-center">{error || actionData?.error}</div>
           )}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <RemixForm onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Form {...form}>
               <FormField
                 control={form.control}
                 name="email"
@@ -119,8 +113,9 @@ export default function LoginPage() {
                 </Link>
               </div>
               <Button type="submit" className="w-full">Log in</Button>
-            </form>
-          </Form>
+            </Form>
+          </RemixForm>
+
           <Separator />
           <div className="space-y-2">
             <Button variant="outline" className="w-full" onClick={() => console.log("Login with Google")}>
@@ -151,49 +146,34 @@ export default function LoginPage() {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
- // try {
+  try {
     return await authenticator.authenticate("user-pass", request, {
       successRedirect: "/profile",
-      failureRedirect: "/login",
+      throwOnError: true,
     });
- // } catch (error) {
-    // Log the error to the console
-  //  console.log(error)
-     
-    // Handle the error and return it as formError
- //   return json({ formError: (error as Error).message }, { status: 400 });
-//  }
+  } catch (error) {
+    // Because redirects work by throwing a Response, you need to check if the
+    // caught error is a response and return it or throw it again
+    if (error instanceof Response) return error;
+    if (error instanceof AuthorizationError) {
+      // here the error is related to the authentication process
+      return error
+    }
+    // here the error is a generic error that another reason may throw
+  }
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  
-  return await authenticator.isAuthenticated(request, {
+  // Check if the user is already authenticated
+  const user = await authenticator.isAuthenticated(request, {
     successRedirect: "/profile",
   });
+
+  // Get the URL to check for error parameter
+  const url = new URL(request.url);
+  const error = url.searchParams.get("error");
+
+  // Return the error message if present
+  return json({ error: error || null });
 }
 
-export function ErrorBoundary() {
-  const error = useRouteError();
-
-  if (isRouteErrorResponse(error)) {
-    return (
-      <div>
-        <h1>
-          {error.status} {error.statusText}
-        </h1>
-        <p>{error.data}</p>
-      </div>
-    );
-  } else if (error instanceof Error) {
-    return (
-      <div>
-        <h1>Error</h1>
-        <p>{error.message}</p>
-        <p>The stack trace is:</p>
-        <pre>{error.stack}</pre>
-      </div>
-    );
-  } else {
-    return <h1>Unknown Error</h1>;
-  }
-}

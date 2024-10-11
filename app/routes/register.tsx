@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
 import { Separator } from "~/components/ui/separator"
 import { Checkbox } from "~/components/ui/checkbox"
-import { json, Link, useActionData, useSubmit } from '@remix-run/react'
+import { json, Link, MetaFunction, useActionData, useSubmit } from '@remix-run/react'
 import { Icons } from '~/ui/icons'
 import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
 import { authenticator } from "~/services/auth.server"
@@ -25,6 +25,13 @@ const loginSchema = z.object({
   rememberMe: z.boolean().default(false),
 })
 
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - create account" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export const action: ActionFunction = async ({ request }) => {

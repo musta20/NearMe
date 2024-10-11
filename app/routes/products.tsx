@@ -19,7 +19,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Input } from "~/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { json, Link, useLoaderData, useSearchParams } from "@remix-run/react"
+import { json, Link, MetaFunction, useLoaderData, useSearchParams } from "@remix-run/react"
 import { ActionFunction, LoaderFunction, redirect } from "@remix-run/node"
 import { authenticator } from "~/services/auth.server"
 import { deleteProduct, getUserProducts } from "~/lib/action"
@@ -42,7 +42,13 @@ type Product = {
   title: string
   // ... other product properties
 }
-
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - products" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",

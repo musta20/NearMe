@@ -23,7 +23,7 @@ import {
 import { toast } from "~/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { LoaderFunction, json, redirect } from "@remix-run/node"
-import { useLoaderData, useActionData, useSubmit } from "@remix-run/react"
+import { useLoaderData, useActionData, useSubmit, MetaFunction } from "@remix-run/react"
 import { getProduct, getAllCategories, updateProduct } from "~/lib/action"
 import { authenticator } from "~/services/auth.server"
 import { ProductImageGallery } from "~/components/ui/ProductImageGallery"
@@ -57,6 +57,13 @@ const productFormSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productFormSchema>
 
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - edit" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 export const action: ActionFunction = async ({ request, params }) => {
   const userId = await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",

@@ -147,7 +147,8 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                   <CarouselContent>
 
                     {product.images && product.images.length > 0 && (
-                      product?.images.map((img:any)=>(<CarouselItem>
+                      product?.images.map((img:any)=>(<CarouselItem                           key={img.id}
+>
                         <img 
                           src={img.imageUrl} 
                           alt={`Product ${product.title}`} 
@@ -213,7 +214,7 @@ export default function DynamicMap({ products, posix, selectedProductId, favorit
                     {product.ratings.map((rating: any) => (
                       <div key={rating.id} className="mb-2 p-2 bg-gray-100 rounded">
                         <div className="flex items-center">
-                          <span className="font-medium mr-2">{rating.user.username}</span>
+                          <span className="font-medium mr-2">{rating?.user?.username}</span>
                           <div className="flex items-center text-yellow-600">
                             <Star size={14} fill="yellow" className="mr-1" />
                             <span>{rating.rating}</span>

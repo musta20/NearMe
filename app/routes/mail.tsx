@@ -18,6 +18,14 @@ type LoaderData = {
   sentMessages: any[];
 };
 
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - mail" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
+
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",

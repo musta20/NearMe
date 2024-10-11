@@ -1,5 +1,5 @@
 import { json, LoaderFunction } from "@remix-run/node";
-import { useLoaderData, useFetcher, Link } from "@remix-run/react";
+import { useLoaderData, useFetcher, Link, MetaFunction } from "@remix-run/react";
 import { DollarSign, MapPin, Heart } from "lucide-react";
 import { getFavotite } from "~/lib/action";
 import { authenticator } from "~/services/auth.server";
@@ -14,6 +14,13 @@ type LoaderData = {
     address: string;
     images: Array<{ imageUrl: string }>;
   }>;
+};
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - favorites products" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
 };
 
 export const loader: LoaderFunction = async ({ request }) => {

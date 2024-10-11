@@ -1,5 +1,5 @@
 import { json, LoaderFunction } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
+import { useLoaderData, Link, MetaFunction } from "@remix-run/react";
 import { authenticator } from "~/services/auth.server";
 import { getInboxMessages, getSentMessages } from "~/lib/action";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -10,6 +10,13 @@ type LoaderData = {
   sentMessages: any[];
 };
 
+export const meta: MetaFunction = () => {
+ 
+  return [
+    { title: "NearMe - mail" },
+    { name: "description", content: "Search for products in your local area. Find nearby items, compare prices, and discover great deals in your neighborhood." },
+  ];
+};
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await authenticator.isAuthenticated(request, {
     failureRedirect: "/login",
